@@ -1,0 +1,20 @@
+# Core pipeline
+awpy>=2.0            # demo parsing (Rust-backed); requires Python >= 3.11
+polars               # awpy returns Polars DataFrames
+pandas               # .to_pandas() interop + sklearn convenience
+pyarrow              # Parquet read/write
+
+# Modeling
+scikit-learn         # baseline, logistic regression, calibration, metrics
+lightgbm             # gradient-boosted classifier
+shap                 # Phase 5 interpretation
+
+# Serving
+fastapi              # POST /predict
+uvicorn[standard]    # ASGI server
+pydantic             # request/response schemas
+
+# Dev / exploration
+jupyter              # Phase 1 schema exploration
+matplotlib           # calibration curves, SHAP plots
+tqdm                 # progress bars for the corpus parse

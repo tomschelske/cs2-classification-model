@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Data & model artifacts (large / regenerable — do not commit)
+data/demos/*.dem
+data/*.parquet
+data/**/*.parquet
+models/*.pkl
+models/*.joblib
+# ...but keep metrics.json so the headline numbers are versioned
+!models/metrics.json
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
