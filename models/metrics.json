@@ -1,0 +1,62 @@
+{
+  "dataset": {
+    "snapshots": 22706,
+    "maps": 44,
+    "series": 16,
+    "t_win_rate": 0.4722
+  },
+  "test_series": [
+    "blast-bounty-2026-season-2-100-thieves-vs-falcons-bo3-1e-d96xDiJ9l7gcqrB38LA",
+    "blast-bounty-2026-season-2-fokus-vs-aurora-bo3-zfDrKoPyS4iFKBK9sKEO9d",
+    "iem-cologne-major-2026-aurora-vs-betboom-bo3-_yiEczoujNq1s7UjFFPzQc",
+    "iem-cologne-major-2026-the-mongolz-vs-monte-bo3-ps6gSiX4TdvRH4CtNlwxon"
+  ],
+  "features": [
+    "players_alive_t",
+    "players_alive_ct",
+    "total_health_t",
+    "total_health_ct",
+    "bomb_planted",
+    "time_remaining",
+    "round_num"
+  ],
+  "models": {
+    "baseline_man_advantage": {
+      "accuracy": 0.7143,
+      "log_loss": 1.974,
+      "brier": 0.2851
+    },
+    "logistic_regression": {
+      "accuracy": 0.7358,
+      "log_loss": 0.4782,
+      "brier": 0.1622,
+      "cv_accuracy_mean": 0.7221,
+      "cv_accuracy_std": 0.0155,
+      "cv_log_loss_mean": 0.5176,
+      "cv_log_loss_std": 0.007
+    },
+    "lightgbm": {
+      "accuracy": 0.7233,
+      "log_loss": 0.498,
+      "brier": 0.1701,
+      "cv_accuracy_mean": 0.7007,
+      "cv_accuracy_std": 0.0149,
+      "cv_log_loss_mean": 0.5349,
+      "cv_log_loss_std": 0.0124
+    }
+  },
+  "headline_vs_baseline": {
+    "best_model": "logistic_regression",
+    "accuracy_gain_pp": 2.15,
+    "log_loss_reduction": 1.4958
+  },
+  "lightgbm_feature_importance_gain": {
+    "total_health_t": 17730,
+    "players_alive_t": 16865,
+    "total_health_ct": 13462,
+    "players_alive_ct": 11511,
+    "round_num": 6165,
+    "bomb_planted": 3499,
+    "time_remaining": 1907
+  }
+}
