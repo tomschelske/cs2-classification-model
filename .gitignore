@@ -12,6 +12,7 @@ venv/
 data/demos/**
 data/*.parquet
 data/**/*.parquet
+data/parse_report.json
 models/*.pkl
 models/*.joblib
 # ...but keep metrics.json so the headline numbers are versioned
