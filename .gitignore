@@ -7,7 +7,9 @@ venv/
 .ipynb_checkpoints/
 
 # Data & model artifacts (large / regenerable — do not commit)
-data/demos/*.dem
+*.dem
+*.rar
+data/demos/**
 data/*.parquet
 data/**/*.parquet
 models/*.pkl

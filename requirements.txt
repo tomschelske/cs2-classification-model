@@ -1,5 +1,7 @@
 # Core pipeline
-awpy>=2.0            # demo parsing (Rust-backed); requires Python >= 3.11
+awpy>=2.0            # demo utilities; requires Python >= 3.11 (we parse via demoparser2 directly)
+demoparser2==0.41.2  # PIN: 0.41.4 has a global-state bug — the 2nd parse call per
+                     # process panics (garbage alloc) on py3.13/arm64. 0.41.2 is clean.
 polars               # awpy returns Polars DataFrames
 pandas               # .to_pandas() interop + sklearn convenience
 pyarrow              # Parquet read/write
