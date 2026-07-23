@@ -83,7 +83,11 @@ def _round_windows(p: DemoParser) -> list[dict]:
             continue  # malformed round (no live start found) — skip
         windows.append(
             {
-                "round_num": i + 1,          # normalized 1..N (match order)
+                # contiguous 1..N over KEPT rounds — demoparser emits a junk
+                # tick-1 round_end (round 0, no winner) plus warmup/knife ends
+                # that have no freeze_end and get skipped above; numbering by
+                # len(windows) makes round_num=1 the real pistol round.
+                "round_num": len(windows) + 1,
                 "raw_round": int(row.round), # demoparser's own numbering
                 "start_tick": max(cands),
                 "end_tick": end_tick,
