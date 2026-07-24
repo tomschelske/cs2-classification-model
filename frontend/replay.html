@@ -1,0 +1,325 @@
+<meta charset="utf-8">
+<title>CS2 Win Probability &mdash; The Mongolz vs Monte, Nuke R13</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#090d14; --panel:#111926; --panel2:#0d141f; --edge:#1d2836;
+    --ink:#e9eef6; --muted:#8494a8; --faint:#4b5a6e;
+    --t:#f2a63b; --t-dim:#8a6520; --t-soft:rgba(242,166,59,.14);
+    --ct:#4ea6e6; --ct-dim:#2b6690; --ct-soft:rgba(78,166,230,.14);
+    --danger:#ff5a3c; --grid:rgba(255,255,255,.055);
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0}
+  .wrap{
+    max-width:1000px; margin:0 auto; padding:clamp(18px,4vw,44px) clamp(14px,4vw,28px) 56px;
+    font-family:var(--sans); color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 70% -10%, rgba(78,166,230,.08), transparent 60%),
+      radial-gradient(900px 500px at 10% 110%, rgba(242,166,59,.06), transparent 55%),
+      var(--bg);
+    min-height:100vh;
+  }
+  .eyebrow{
+    font-family:var(--mono); font-size:12px; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--muted); display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{content:""; width:26px; height:1px; background:var(--faint)}
+  h1{
+    font-size:clamp(26px,5vw,44px); line-height:1.02; margin:.32em 0 .1em; letter-spacing:-.02em;
+    text-wrap:balance; font-weight:800;
+  }
+  h1 .vs{color:var(--faint); font-weight:500; margin:0 .28em; font-size:.62em; vertical-align:.12em}
+  h1 .mgz{color:var(--t)} h1 .mnt{color:var(--ct)}
+  .sub{color:var(--muted); font-size:14.5px; max-width:60ch; line-height:1.5; margin:.2em 0 0}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:16px}
+  .chip{
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; color:var(--ink);
+    background:var(--panel); border:1px solid var(--edge); padding:6px 10px; border-radius:6px;
+    text-transform:uppercase; display:flex; gap:7px; align-items:center;
+  }
+  .chip b{color:var(--muted); font-weight:500}
+
+  .readout{
+    display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:18px;
+    margin:26px 0 12px; padding:16px 20px; background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--edge); border-radius:12px;
+  }
+  .prob{font-family:var(--mono); font-weight:700; font-size:clamp(34px,7vw,54px); line-height:1; font-variant-numeric:tabular-nums}
+  .prob small{font-size:.42em; color:var(--muted); font-weight:500; letter-spacing:.08em}
+  .favor{font-family:var(--mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; margin-top:8px; color:var(--muted)}
+  .favor b{font-weight:700}
+  .clock{text-align:right; font-family:var(--mono)}
+  .clock .t{font-size:26px; font-weight:700; font-variant-numeric:tabular-nums}
+  .clock .lab{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+  .clock .bomb{color:var(--danger); font-weight:700}
+
+  .chartwrap{position:relative; border:1px solid var(--edge); border-radius:12px; overflow:hidden; background:var(--panel2)}
+  canvas{display:block; width:100%; height:auto}
+
+  .controls{display:flex; align-items:center; gap:14px; margin:14px 0 22px}
+  .play{
+    font-family:var(--mono); font-size:13px; letter-spacing:.06em; text-transform:uppercase;
+    color:#08111c; background:var(--t); border:none; border-radius:8px; padding:11px 18px;
+    cursor:pointer; font-weight:700; display:flex; align-items:center; gap:9px; min-width:120px; justify-content:center;
+    transition:filter .15s;
+  }
+  .play:hover{filter:brightness(1.08)} .play:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+  .scrub{flex:1; accent-color:var(--t); height:4px}
+  .scrub:focus-visible{outline:2px solid var(--ct); outline-offset:4px}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:22px}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr}}
+  .side{background:var(--panel); border:1px solid var(--edge); border-radius:11px; padding:15px 16px}
+  .side.t{border-top:2px solid var(--t)} .side.ct{border-top:2px solid var(--ct)}
+  .side h3{margin:0 0 12px; font-family:var(--mono); font-size:12px; letter-spacing:.12em; text-transform:uppercase; display:flex; justify-content:space-between; align-items:baseline}
+  .side.t h3{color:var(--t)} .side.ct h3{color:var(--ct)}
+  .side h3 .team{color:var(--muted); font-weight:500; letter-spacing:.04em}
+  .dots{display:flex; gap:7px; margin-bottom:12px}
+  .dot{width:100%; height:9px; border-radius:3px; background:var(--edge); transition:background .2s,box-shadow .2s}
+  .side.t .dot.on{background:var(--t); box-shadow:0 0 10px var(--t-soft)}
+  .side.ct .dot.on{background:var(--ct); box-shadow:0 0 10px var(--ct-soft)}
+  .hp{display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:12px; color:var(--muted)}
+  .hpbar{flex:1; height:6px; border-radius:3px; background:var(--edge); overflow:hidden}
+  .hpfill{height:100%; width:100%; transition:width .2s}
+  .side.t .hpfill{background:var(--t)} .side.ct .hpfill{background:var(--ct)}
+  .hpval{color:var(--ink); font-variant-numeric:tabular-nums; min-width:66px; text-align:right}
+
+  .feed{background:var(--panel); border:1px solid var(--edge); border-radius:11px; padding:6px 6px; margin-bottom:26px}
+  .feed h4{margin:8px 12px 6px; font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+  .row{
+    font-family:var(--mono); font-size:13px; display:flex; align-items:center; gap:10px; padding:8px 12px;
+    border-radius:7px; opacity:.28; transition:opacity .25s,background .25s;
+  }
+  .row.on{opacity:1}
+  .row.now{background:rgba(255,255,255,.05)}
+  .row .tag{font-size:10px; letter-spacing:.08em; padding:2px 6px; border-radius:4px; min-width:52px; text-align:center}
+  .row.t .tag{background:var(--t-soft); color:var(--t)}
+  .row.ct .tag{background:var(--ct-soft); color:var(--ct)}
+  .row.evt .tag{background:rgba(255,90,60,.16); color:var(--danger)}
+  .row .txt b{font-weight:700}
+  .row.t .txt b{color:var(--t)} .row.ct .txt b{color:var(--ct)}
+  .row .rt{margin-left:auto; color:var(--faint); font-variant-numeric:tabular-nums}
+
+  .result{
+    margin:0 0 26px; padding:16px 20px; border-radius:11px; text-align:center; font-family:var(--mono);
+    background:linear-gradient(180deg,rgba(242,166,59,.14),rgba(242,166,59,.05));
+    border:1px solid var(--t-dim); color:var(--t); font-weight:700; letter-spacing:.05em;
+    opacity:0; transform:translateY(6px); transition:opacity .4s,transform .4s; font-size:15px;
+  }
+  .result.show{opacity:1; transform:none}
+  .result small{display:block; color:var(--muted); font-weight:500; margin-top:6px; letter-spacing:.03em; text-transform:none; line-height:1.5}
+
+  footer{border-top:1px solid var(--edge); padding-top:18px; color:var(--muted); font-size:13px; line-height:1.6}
+  footer .legend{display:flex; flex-wrap:wrap; gap:16px 22px; margin-bottom:14px; font-family:var(--mono); font-size:11.5px; letter-spacing:.04em}
+  footer .lg{display:flex; align-items:center; gap:8px}
+  footer .sw{width:14px; height:4px; border-radius:2px}
+  footer b{color:var(--ink); font-weight:600}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">CS2 &middot; Round Win-Probability Model</div>
+  <h1><span class="mgz">The Mongolz</span><span class="vs">vs</span><span class="mnt">Monte</span></h1>
+  <p class="sub">A held-out round the model never trained on. Watch the calibrated
+    win probability move with every kill, the plant, and the clock &mdash; a comeback
+    that ends on a technicality only a probability model would price correctly.</p>
+  <div class="chips">
+    <div class="chip"><b>Map</b> Nuke</div>
+    <div class="chip"><b>Round</b> 13</div>
+    <div class="chip"><b>Event</b> IEM Cologne Major 2026</div>
+    <div class="chip"><b>Format</b> Bo3 &middot; Map 1</div>
+  </div>
+
+  <div class="readout">
+    <div><div class="prob" id="prob">44<small>%</small></div></div>
+    <div class="favor" id="favor">slight <b>CT</b> favored</div>
+    <div class="clock">
+      <div class="t" id="clk">0:00</div>
+      <div class="lab" id="clklab">round time</div>
+    </div>
+  </div>
+
+  <div class="chartwrap"><canvas id="chart" aria-label="Win probability over round time"></canvas></div>
+
+  <div class="controls">
+    <button class="play" id="play" aria-label="Play replay">&#9654; Play</button>
+    <input class="scrub" id="scrub" type="range" min="0" max="1000" value="0" aria-label="Scrub round timeline">
+  </div>
+
+  <div class="result" id="result"></div>
+
+  <div class="grid2">
+    <div class="side t">
+      <h3><span>T Side <span class="team">&middot; The Mongolz</span></span><span style="color:var(--muted);font-weight:500">attacking</span></h3>
+      <div class="dots" id="dots-t"></div>
+      <div class="hp"><span>HP</span><div class="hpbar"><div class="hpfill" id="hp-t"></div></div><span class="hpval" id="hpv-t">500 / 500</span></div>
+    </div>
+    <div class="side ct">
+      <h3><span>CT Side <span class="team">&middot; Monte</span></span><span style="color:var(--muted);font-weight:500">defending</span></h3>
+      <div class="dots" id="dots-ct"></div>
+      <div class="hp"><span>HP</span><div class="hpbar"><div class="hpfill" id="hp-ct"></div></div><span class="hpval" id="hpv-ct">500 / 500</span></div>
+    </div>
+  </div>
+
+  <div class="feed">
+    <h4>Round feed</h4>
+    <div id="feed"></div>
+  </div>
+
+  <footer>
+    <div class="legend">
+      <div class="lg"><span class="sw" style="background:var(--t)"></span> T favored (&gt;50%)</div>
+      <div class="lg"><span class="sw" style="background:var(--ct)"></span> CT favored (&lt;50%)</div>
+      <div class="lg"><span class="sw" style="background:var(--danger)"></span> Bomb event</div>
+    </div>
+    Probability from a calibrated <b>logistic-regression</b> model &mdash; 7 live features
+    (players alive &amp; total HP per side, bomb planted, time remaining, round). <b>73.6%</b>
+    accuracy and <b>0.48</b> log-loss on held-out matches, split at the series level so no
+    team appears in both training and test. The curve is this model scoring the round frame
+    by frame; it was never shown this round.
+  </footer>
+</div>
+
+<script>
+const DATA = {"meta": {"match": "the", "map": "de_nuke", "round": 13, "winner": "T", "reason": "bomb_exploded", "duration": 81.0, "tickrate": 64}, "series": [{"t": 0.0, "p": 0.4419, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 1.0, "p": 0.4423, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 2.0, "p": 0.4426, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 3.0, "p": 0.443, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 4.0, "p": 0.4434, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 5.0, "p": 0.4437, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 6.0, "p": 0.4441, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 7.0, "p": 0.4445, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 8.0, "p": 0.4448, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 9.0, "p": 0.4452, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 10.0, "p": 0.4456, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 11.0, "p": 0.4459, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 12.0, "p": 0.4463, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 13.0, "p": 0.4467, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 14.0, "p": 0.447, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 15.0, "p": 0.4474, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 16.0, "p": 0.4478, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 17.0, "p": 0.4482, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 18.0, "p": 0.4485, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 19.0, "p": 0.4489, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 20.0, "p": 0.4493, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 21.0, "p": 0.4496, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 22.0, "p": 0.45, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 23.0, "p": 0.4504, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 500, "planted": false}, {"t": 24.0, "p": 0.4669, "alive_t": 5, "alive_ct": 5, "hp_t": 500, "hp_ct": 490, "planted": false}, {"t": 24.8, "p": 0.1742, "alive_t": 4, "alive_ct": 5, "hp_t": 385, "hp_ct": 490, "planted": false}, {"t": 25.0, "p": 0.1742, "alive_t": 4, "alive_ct": 5, "hp_t": 385, "hp_ct": 490, "planted": false}, {"t": 25.2, "p": 0.0559, "alive_t": 3, "alive_ct": 5, "hp_t": 300, "hp_ct": 490, "planted": false}, {"t": 26.0, "p": 0.0559, "alive_t": 3, "alive_ct": 5, "hp_t": 300, "hp_ct": 490, "planted": false}, {"t": 26.9, "p": 0.1921, "alive_t": 3, "alive_ct": 4, "hp_t": 300, "hp_ct": 390, "planted": false}, {"t": 27.0, "p": 0.1921, "alive_t": 3, "alive_ct": 4, "hp_t": 300, "hp_ct": 390, "planted": false}, {"t": 28.0, "p": 0.1924, "alive_t": 3, "alive_ct": 4, "hp_t": 300, "hp_ct": 390, "planted": false}, {"t": 29.0, "p": 0.1926, "alive_t": 3, "alive_ct": 4, "hp_t": 300, "hp_ct": 390, "planted": false}, {"t": 29.7, "p": 0.4728, "alive_t": 3, "alive_ct": 3, "hp_t": 300, "hp_ct": 300, "planted": false}, {"t": 29.9, "p": 0.1889, "alive_t": 2, "alive_ct": 3, "hp_t": 200, "hp_ct": 300, "planted": false}, {"t": 30.0, "p": 0.189, "alive_t": 2, "alive_ct": 3, "hp_t": 200, "hp_ct": 300, "planted": false}, {"t": 30.7, "p": 0.4831, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 200, "planted": false}, {"t": 31.0, "p": 0.4832, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 200, "planted": false}, {"t": 32.0, "p": 0.4836, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 200, "planted": false}, {"t": 33.0, "p": 0.484, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 200, "planted": false}, {"t": 34.0, "p": 0.4843, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 200, "planted": false}, {"t": 35.0, "p": 0.4847, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 200, "planted": false}, {"t": 36.0, "p": 0.4851, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 200, "planted": false}, {"t": 37.0, "p": 0.5082, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 186, "planted": false}, {"t": 38.0, "p": 0.5086, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 186, "planted": false}, {"t": 39.0, "p": 0.509, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 186, "planted": false}, {"t": 40.0, "p": 0.5093, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 186, "planted": false}, {"t": 40.2, "p": 0.7136, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 186, "planted": true}, {"t": 41.0, "p": 0.7138, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 186, "planted": true}, {"t": 42.0, "p": 0.7141, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 186, "planted": true}, {"t": 43.0, "p": 0.7249, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 178, "planted": true}, {"t": 44.0, "p": 0.7252, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 178, "planted": true}, {"t": 45.0, "p": 0.7255, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 178, "planted": true}, {"t": 46.0, "p": 0.7258, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 178, "planted": true}, {"t": 47.0, "p": 0.7261, "alive_t": 2, "alive_ct": 2, "hp_t": 200, "hp_ct": 178, "planted": true}, {"t": 48.0, "p": 0.9022, "alive_t": 2, "alive_ct": 1, "hp_t": 200, "hp_ct": 100, "planted": true}, {"t": 48.0, "p": 0.9022, "alive_t": 2, "alive_ct": 1, "hp_t": 200, "hp_ct": 100, "planted": true}, {"t": 49.0, "p": 0.9023, "alive_t": 2, "alive_ct": 1, "hp_t": 200, "hp_ct": 100, "planted": true}, {"t": 50.0, "p": 0.9024, "alive_t": 2, "alive_ct": 1, "hp_t": 200, "hp_ct": 100, "planted": true}, {"t": 51.0, "p": 0.9026, "alive_t": 2, "alive_ct": 1, "hp_t": 200, "hp_ct": 100, "planted": true}, {"t": 52.0, "p": 0.8962, "alive_t": 2, "alive_ct": 1, "hp_t": 186, "hp_ct": 100, "planted": true}, {"t": 53.0, "p": 0.8945, "alive_t": 2, "alive_ct": 1, "hp_t": 158, "hp_ct": 81, "planted": true}, {"t": 53.1, "p": 0.732, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 54.0, "p": 0.7322, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 55.0, "p": 0.7325, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 56.0, "p": 0.7328, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 57.0, "p": 0.7331, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 58.0, "p": 0.7334, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 59.0, "p": 0.7337, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 60.0, "p": 0.734, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 61.0, "p": 0.7343, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 62.0, "p": 0.7346, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 63.0, "p": 0.7348, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 64.0, "p": 0.7351, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 65.0, "p": 0.7354, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 66.0, "p": 0.7357, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 67.0, "p": 0.736, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 68.0, "p": 0.7363, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 69.0, "p": 0.7366, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 70.0, "p": 0.7369, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 71.0, "p": 0.7372, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 72.0, "p": 0.7374, "alive_t": 1, "alive_ct": 1, "hp_t": 100, "hp_ct": 81, "planted": true}, {"t": 72.7, "p": 0.4221, "alive_t": 0, "alive_ct": 1, "hp_t": 0, "hp_ct": 81, "planted": true}, {"t": 73.0, "p": 0.4222, "alive_t": 0, "alive_ct": 1, "hp_t": 0, "hp_ct": 81, "planted": true}, {"t": 74.0, "p": 0.4225, "alive_t": 0, "alive_ct": 1, "hp_t": 0, "hp_ct": 81, "planted": true}, {"t": 75.0, "p": 0.4229, "alive_t": 0, "alive_ct": 1, "hp_t": 0, "hp_ct": 81, "planted": true}, {"t": 76.0, "p": 0.4233, "alive_t": 0, "alive_ct": 1, "hp_t": 0, "hp_ct": 81, "planted": true}, {"t": 77.0, "p": 0.4236, "alive_t": 0, "alive_ct": 1, "hp_t": 0, "hp_ct": 81, "planted": true}, {"t": 78.0, "p": 0.424, "alive_t": 0, "alive_ct": 1, "hp_t": 0, "hp_ct": 81, "planted": true}, {"t": 79.0, "p": 0.4244, "alive_t": 0, "alive_ct": 1, "hp_t": 0, "hp_ct": 81, "planted": true}, {"t": 80.0, "p": 0.4247, "alive_t": 0, "alive_ct": 1, "hp_t": 0, "hp_ct": 81, "planted": true}, {"t": 81.0, "p": 0.4248, "alive_t": 0, "alive_ct": 1, "hp_t": 0, "hp_ct": 81, "planted": true}], "events": [{"t": 24.8, "type": "kill", "side": "CT", "text": "AZUWU \u2316 Techno4K"}, {"t": 25.2, "type": "kill", "side": "CT", "text": "Bymas \u2316 cobrazera"}, {"t": 26.9, "type": "kill", "side": "T", "text": "bLitz \u2316 AZUWU"}, {"t": 29.7, "type": "kill", "side": "T", "text": "Mzinho \u2316 afro"}, {"t": 29.9, "type": "kill", "side": "CT", "text": "Gizmy \u2316 910"}, {"t": 30.7, "type": "kill", "side": "T", "text": "bLitz \u2316 Bymas"}, {"t": 40.2, "type": "plant", "side": "T", "text": "Bomb planted"}, {"t": 48.0, "type": "kill", "side": "T", "text": "Mzinho \u2316 Gizmy"}, {"t": 53.1, "type": "kill", "side": "CT", "text": "Rainwaker \u2316 Mzinho"}, {"t": 72.7, "type": "kill", "side": "CT", "text": "Rainwaker \u2316 bLitz"}]};
+(function(){
+  const S = DATA.series, EV = DATA.events.slice();
+  const DUR = DATA.meta.duration;
+  const plantT = (EV.find(e=>e.type==='plant')||{}).t;
+  if(DATA.meta.reason==='bomb_exploded') EV.push({t:DUR,type:'explode',side:'T',text:'Bomb exploded'});
+  EV.sort((a,b)=>a.t-b.t);
+  const SEP=' ⌖ ', KILLX=' ✕ ', DIAMOND='◆';
+
+  const cv=document.getElementById('chart'), ctx=cv.getContext('2d');
+  let W=0,H=0; const DPR=Math.min(window.devicePixelRatio||1,2);
+  const PADL=44,PADR=16,PADT=18,PADB=28;
+
+  const px=t=>PADL+(t/DUR)*(W-PADL-PADR);
+  const py=p=>PADT+(1-p)*(H-PADT-PADB);
+  function pAt(t){
+    if(t<=S[0].t)return S[0].p; if(t>=S[S.length-1].t)return S[S.length-1].p;
+    for(let i=0;i<S.length-1;i++){if(t>=S[i].t&&t<=S[i+1].t){
+      const f=(t-S[i].t)/((S[i+1].t-S[i].t)||1); return S[i].p+f*(S[i+1].p-S[i].p);}}
+    return S[S.length-1].p;
+  }
+  function stateAt(t){let s=S[0]; for(const x of S){if(x.t<=t+1e-6)s=x; else break;} return s;}
+
+  function resize(){
+    W=cv.clientWidth; H=Math.max(300,Math.round(W*0.46));
+    cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); cv.style.height=H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0); draw(cur);
+  }
+
+  function draw(t){
+    ctx.clearRect(0,0,W,H);
+    const mid=py(0.5);
+    ctx.lineWidth=1; ctx.font='11px ui-monospace,Menlo,monospace';
+    ctx.fillStyle='#5b6a7e'; ctx.textAlign='right'; ctx.textBaseline='middle';
+    [0,.25,.5,.75,1].forEach(p=>{const y=py(p); ctx.beginPath();ctx.moveTo(PADL,y);ctx.lineTo(W-PADR,y);
+      ctx.strokeStyle=p===.5?'rgba(255,255,255,.16)':'rgba(255,255,255,.05)';
+      ctx.setLineDash(p===.5?[5,5]:[]); ctx.stroke();
+      ctx.fillText(Math.round(p*100)+'%',PADL-8,y);});
+    ctx.setLineDash([]); ctx.textAlign='center'; ctx.textBaseline='top';
+    for(let s=0;s<=DUR;s+=20){ctx.fillStyle='#5b6a7e'; ctx.fillText(s+'s',px(s),H-PADB+7);}
+
+    const pts=S.map(d=>[px(d.t),py(d.p)]);
+    ctx.save();ctx.beginPath();ctx.rect(PADL,PADT,W-PADL-PADR,mid-PADT);ctx.clip();
+    ctx.beginPath();ctx.moveTo(pts[0][0],py(0));pts.forEach(p=>ctx.lineTo(p[0],p[1]));
+    ctx.lineTo(pts[pts.length-1][0],H);ctx.lineTo(pts[0][0],H);ctx.closePath();
+    let g=ctx.createLinearGradient(0,PADT,0,mid);g.addColorStop(0,'rgba(242,166,59,.34)');g.addColorStop(1,'rgba(242,166,59,.04)');
+    ctx.fillStyle=g;ctx.fill();ctx.restore();
+    ctx.save();ctx.beginPath();ctx.rect(PADL,mid,W-PADL-PADR,H-PADB-mid);ctx.clip();
+    ctx.beginPath();ctx.moveTo(pts[0][0],0);pts.forEach(p=>ctx.lineTo(p[0],p[1]));
+    ctx.lineTo(pts[pts.length-1][0],0);ctx.closePath();
+    g=ctx.createLinearGradient(0,mid,0,H-PADB);g.addColorStop(0,'rgba(78,166,230,.05)');g.addColorStop(1,'rgba(78,166,230,.34)');
+    ctx.fillStyle=g;ctx.fill();ctx.restore();
+
+    ctx.lineWidth=2.4;ctx.lineJoin='round';ctx.lineCap='round';
+    for(let i=0;i<pts.length-1;i++){
+      const above=(S[i].p+S[i+1].p)/2>=0.5;
+      ctx.strokeStyle=above?'#f2a63b':'#4ea6e6';
+      ctx.shadowColor=above?'rgba(242,166,59,.5)':'rgba(78,166,230,.5)';ctx.shadowBlur=8;
+      ctx.beginPath();ctx.moveTo(pts[i][0],pts[i][1]);ctx.lineTo(pts[i+1][0],pts[i+1][1]);ctx.stroke();
+    }
+    ctx.shadowBlur=0;
+
+    EV.forEach(e=>{const x=px(e.t),y=py(pAt(e.t));
+      if(e.type==='kill'){ctx.fillStyle=e.side==='T'?'#f2a63b':'#4ea6e6';
+        ctx.beginPath();ctx.arc(x,y,3.1,0,7);ctx.fill();
+        ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=1;ctx.stroke();}
+      else{const c=e.type==='explode'?'#ff5a3c':'#f2a63b';
+        ctx.strokeStyle=c;ctx.setLineDash([3,4]);ctx.lineWidth=1.2;
+        ctx.beginPath();ctx.moveTo(x,PADT);ctx.lineTo(x,H-PADB);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle=c;ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI/4);
+        const s=e.type==='explode'?5.5:4.5;ctx.fillRect(-s,-s,2*s,2*s);ctx.restore();}
+    });
+
+    const hx=px(t),hy=py(pAt(t));
+    ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(hx,PADT);ctx.lineTo(hx,H-PADB);ctx.stroke();
+    ctx.fillStyle=pAt(t)>=.5?'#f2a63b':'#4ea6e6';ctx.beginPath();ctx.arc(hx,hy,5.2,0,7);ctx.fill();
+    ctx.fillStyle='#090d14';ctx.beginPath();ctx.arc(hx,hy,2,0,7);ctx.fill();
+  }
+
+  const $=id=>document.getElementById(id);
+  const dotsT=$('dots-t'),dotsCt=$('dots-ct');
+  for(let i=0;i<5;i++){dotsT.appendChild(Object.assign(document.createElement('div'),{className:'dot'}));
+    dotsCt.appendChild(Object.assign(document.createElement('div'),{className:'dot'}));}
+  const fmt=t=>{const m=Math.floor(t/60),s=Math.floor(t%60);return m+':'+String(s).padStart(2,'0');};
+
+  function update(t){
+    const p=pAt(t), st=stateAt(t);
+    $('prob').innerHTML=Math.round(p*100)+'<small>%</small>';
+    $('prob').style.color=p>=.5?'var(--t)':'var(--ct)';
+    const edge=Math.abs(p-.5)*200, who=p>=.5?'T':'CT';
+    const word=edge<12?'slight ':edge<40?'':'heavy ';
+    $('favor').innerHTML=(edge<6?'coin flip':word+'<b>'+who+'</b> favored');
+    if(st.planted&&plantT!=null){const bl=Math.max(0,40-(t-plantT));
+      $('clk').innerHTML='<span class="bomb">'+bl.toFixed(0)+'s</span>';$('clklab').textContent='bomb timer';}
+    else{$('clk').textContent=fmt(t);$('clklab').textContent='round time';}
+    [['t',st.alive_t,st.hp_t],['ct',st.alive_ct,st.hp_ct]].forEach(([sd,al,hp])=>{
+      document.querySelectorAll('#dots-'+sd+' .dot').forEach((d,i)=>d.classList.toggle('on',i<al));
+      $('hp-'+sd).style.width=(hp/500*100)+'%'; $('hpv-'+sd).textContent=hp+' / 500';
+    });
+    const fe=$('feed');fe.innerHTML='';
+    EV.forEach(e=>{
+      const on=e.t<=t+1e-6, isEvt=e.type!=='kill';
+      const row=document.createElement('div');
+      row.className='row '+(isEvt?'evt':e.side.toLowerCase())+(on?' on':'');
+      const tag=isEvt?(e.type==='plant'?'PLANT':e.type==='defuse'?'DEFUSE':'BOMB'):e.side;
+      let txt;
+      if(e.type==='kill'){const parts=e.text.split(SEP);txt='<b>'+parts[0]+'</b>'+KILLX+parts[1];}
+      else txt='<b>'+e.text+'</b>';
+      row.innerHTML='<span class="tag">'+tag+'</span><span class="txt">'+txt+'</span><span class="rt">'+fmt(e.t)+'</span>';
+      fe.appendChild(row);
+    });
+    const res=$('result');
+    if(t>=DUR-.05){res.classList.add('show');
+      res.innerHTML=DIAMOND+' Bomb exploded &mdash; The Mongolz (T) win the round'+
+        '<small>Their last player fell at 1:12 with the model reading 42% &mdash; but the bomb, planted at 0:40, detonated before Monte’s survivor could defuse. Exactly the spot where alive-count alone says CT, and a calibrated model does not.</small>';}
+    else res.classList.remove('show');
+  }
+
+  let cur=0, playing=false, raf=null, last=0;
+  const PLAY_SECONDS=22;
+  const scrub=$('scrub'), playBtn=$('play');
+  function set(t){cur=Math.max(0,Math.min(DUR,t));draw(cur);update(cur);scrub.value=Math.round(cur/DUR*1000);}
+  function tick(ts){
+    if(!playing)return; if(!last)last=ts; const dt=(ts-last)/1000;last=ts;
+    set(cur+dt*(DUR/PLAY_SECONDS));
+    if(cur>=DUR){playing=false;playBtn.innerHTML='↻ Replay';return;}
+    raf=requestAnimationFrame(tick);
+  }
+  function play(){if(cur>=DUR)set(0); playing=true;last=0;playBtn.innerHTML='❚❚ Pause';raf=requestAnimationFrame(tick);}
+  function pause(){playing=false;playBtn.innerHTML='▶ Play';if(raf)cancelAnimationFrame(raf);}
+  playBtn.addEventListener('click',()=>playing?pause():play());
+  scrub.addEventListener('input',()=>{pause();set(cur=DUR*scrub.value/1000);});
+
+  window.addEventListener('resize',resize);
+  resize();
+  if(window.matchMedia('(prefers-reduced-motion:reduce)').matches){set(DUR);}
+  else{set(0); setTimeout(play,650);}
+})();
+</script>
