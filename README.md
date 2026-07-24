@@ -11,19 +11,23 @@ Full plan: [`cs2-win-probability-project.md`](cs2-win-probability-project.md).
 
 Built from **22,706 labeled snapshots** parsed out of **44 pro demo maps** across
 **16 series** (BLAST Bounty S2 + IEM Cologne Major 2026), split at the **series
-level** so no team appears in both training and test.
+level** so no team appears in both training and test. **21 features**: 7 core
+(alive/HP per side, bomb, time, round) + 6 secondary (equipment value, utility,
+defuse kits, score differential) + a map one-hot.
 
 | | Accuracy | Log-loss |
 |---|---|---|
 | Man-advantage baseline | 71.4% | 1.974 |
-| **Logistic regression** (deployed) | **73.6%** | **0.478** |
-| LightGBM | 72.3% | 0.498 |
+| **Logistic regression** (deployed) | **80.3%** | **0.415** |
+| LightGBM | 76.9% | 0.467 |
 
-The trained model beats the baseline by **+2.2 pp accuracy** and cuts **log-loss
-76%** — the headline being *calibration*: it turns hard 0/1 guesses into
-probabilities that hold up (see `models/calibration.png`). Served through FastAPI
-at **11,709 req/s, p99 9 ms** after folding the pipeline into a single weight
-vector (**419× faster** inference than the naive sklearn+DataFrame path).
+The trained model beats the baseline by **+8.9 pp accuracy** and cuts **log-loss
+79%** — the headline being *calibration*: it turns hard 0/1 guesses into
+probabilities that hold up (see `models/calibration.png`). **Equipment value is
+the single strongest feature** — the eco/full-buy signal a bodies-and-HP model is
+blind to. Served through FastAPI at **11,709 req/s, p99 9 ms** after folding the
+pipeline into a single weight vector (**419× faster** inference than the naive
+sklearn+DataFrame path).
 
 **▶ Live demo — animated win-probability replay of a held-out round:**
 <https://claude.ai/code/artifact/6eba7aea-3a9b-457d-af11-535a67a42390>

@@ -61,8 +61,9 @@ app = FastAPI(title="CS2 Round Win-Probability", version="1.0.0", lifespan=lifes
 
 
 class GameState(BaseModel):
-    """A single round snapshot — must match features.CORE_FEATURES."""
+    """A single round snapshot — core + secondary features, plus the map."""
 
+    # core
     players_alive_t: int = Field(ge=0, le=5, examples=[2])
     players_alive_ct: int = Field(ge=0, le=5, examples=[1])
     total_health_t: int = Field(ge=0, le=500, examples=[200])
@@ -70,6 +71,14 @@ class GameState(BaseModel):
     bomb_planted: bool = Field(examples=[True])
     time_remaining: float = Field(ge=0, examples=[32.0])
     round_num: int = Field(ge=1, examples=[13])
+    # secondary
+    equip_value_t: int = Field(ge=0, examples=[9200])
+    equip_value_ct: int = Field(ge=0, examples=[3400])
+    utility_t: int = Field(ge=0, examples=[3])
+    utility_ct: int = Field(ge=0, examples=[1])
+    defuse_kits_ct: int = Field(ge=0, le=5, examples=[1])
+    score_diff: int = Field(examples=[2])
+    map: str = Field(examples=["de_nuke"], description="e.g. de_mirage, de_nuke")
 
 
 class Prediction(BaseModel):
@@ -77,10 +86,15 @@ class Prediction(BaseModel):
 
 
 def _proba(state: GameState) -> float:
-    feats = _STATE["features"]
-    row = state.model_dump()
-    row["bomb_planted"] = int(row["bomb_planted"])
-    x = np.fromiter((row[f] for f in feats), dtype=np.float64, count=len(feats))
+    d = state.model_dump()
+    d["bomb_planted"] = int(d["bomb_planted"])
+    map_col = f"map_{d.pop('map')}"
+    # map_* one-hot columns (from train's build_X) are set from the map string;
+    # everything else is read straight off the request.
+    x = np.fromiter(
+        ((1.0 if f == map_col else 0.0) if f.startswith("map_") else float(d[f])
+         for f in _STATE["features"]),
+        dtype=np.float64, count=len(_STATE["features"]))
     kernel = _STATE["kernel"]
     if kernel is not None:                      # fast linear path
         w, b = kernel

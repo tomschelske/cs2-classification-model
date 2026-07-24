@@ -31,7 +31,20 @@ DEFAULT_TICK_RATE = 64      # CS2 GOTV; verified per-demo below
 
 # Per-tick properties we pull (all validated against demoparser2 0.41.2).
 # team_num: 2 = TERRORIST side, 3 = CT side (current side at that tick).
-TICK_PROPS = ["health", "is_alive", "team_num", "is_bomb_planted"]
+TICK_PROPS = [
+    "health", "is_alive", "team_num", "is_bomb_planted",
+    # secondary (iteration two):
+    "current_equip_value",  # $ value of a player's current gear -> equipment/side
+    "has_defuser",          # CT defuse kit
+    "inventory",            # item-name list -> utility remaining
+    "team_rounds_total",    # this team's round score -> score differential
+]
+
+# Grenade item names in `inventory` (used to count utility remaining per side).
+GRENADES = frozenset({
+    "Flashbang", "Smoke Grenade", "High Explosive Grenade",
+    "Incendiary Grenade", "Molotov", "Decoy Grenade",
+})
 
 # --- Output schema ------------------------------------------------------------
 CORE_FEATURES = [
@@ -43,6 +56,20 @@ CORE_FEATURES = [
     "time_remaining",     # seconds on the active clock (round, or bomb if planted)
     "round_num",
 ]
+# Iteration-two features (see project doc §4). equip/utility/kits count only
+# living players (dead players hold no firepower); score_diff = T score - CT.
+SECONDARY_FEATURES = [
+    "equip_value_t",
+    "equip_value_ct",
+    "utility_t",
+    "utility_ct",
+    "defuse_kits_ct",
+    "score_diff",
+]
+# Categorical context, one-hot encoded downstream (in train.py). (bomb_site was
+# tried but demoparser2 returns map-specific entity IDs, not A/B — dropped.)
+CATEGORICAL = ["map"]
+
 LABEL = "t_win"           # 1 if the T side won the round, else 0
 GROUP_KEY = "match_id"    # split on this — never let a match cross the split
 
@@ -142,10 +169,22 @@ def build_snapshots(demo_path: str | Path, match_id: str | None = None) -> pd.Da
 
     is_t = td["team_num"] == TEAM_T
     is_ct = td["team_num"] == TEAM_CT
-    td["alive_t"] = (td["is_alive"] & is_t).astype(int)
-    td["alive_ct"] = (td["is_alive"] & is_ct).astype(int)
+    alive_t = td["is_alive"] & is_t
+    alive_ct = td["is_alive"] & is_ct
+    td["alive_t"] = alive_t.astype(int)
+    td["alive_ct"] = alive_ct.astype(int)
     td["hp_t"] = td["health"].where(is_t, 0)
     td["hp_ct"] = td["health"].where(is_ct, 0)
+    # --- secondary: equipment, utility, kits, score (living players only) ---
+    td["nades"] = td["inventory"].apply(
+        lambda inv: sum(i in GRENADES for i in inv) if inv is not None else 0)
+    td["equip_t"] = td["current_equip_value"].where(alive_t, 0)
+    td["equip_ct"] = td["current_equip_value"].where(alive_ct, 0)
+    td["util_t"] = td["nades"].where(alive_t, 0)
+    td["util_ct"] = td["nades"].where(alive_ct, 0)
+    td["kit_ct"] = (td["has_defuser"] & alive_ct).astype(int)
+    td["score_t"] = td["team_rounds_total"].where(is_t, 0)
+    td["score_ct"] = td["team_rounds_total"].where(is_ct, 0)
 
     agg = td.groupby("tick").agg(
         players_alive_t=("alive_t", "sum"),
@@ -153,6 +192,13 @@ def build_snapshots(demo_path: str | Path, match_id: str | None = None) -> pd.Da
         total_health_t=("hp_t", "sum"),
         total_health_ct=("hp_ct", "sum"),
         bomb_planted=("is_bomb_planted", "max"),
+        equip_value_t=("equip_t", "sum"),
+        equip_value_ct=("equip_ct", "sum"),
+        utility_t=("util_t", "sum"),
+        utility_ct=("util_ct", "sum"),
+        defuse_kits_ct=("kit_ct", "sum"),
+        score_t=("score_t", "max"),
+        score_ct=("score_ct", "max"),
     ).reset_index()
 
     # attach round meta + time features + label
@@ -179,6 +225,13 @@ def build_snapshots(demo_path: str | Path, match_id: str | None = None) -> pd.Da
                 "total_health_ct": int(r.total_health_ct),
                 "bomb_planted": planted,
                 "time_remaining": round(time_remaining, 2),
+                # secondary features
+                "equip_value_t": int(r.equip_value_t),
+                "equip_value_ct": int(r.equip_value_ct),
+                "utility_t": int(r.utility_t),
+                "utility_ct": int(r.utility_ct),
+                "defuse_kits_ct": int(r.defuse_kits_ct),
+                "score_diff": int(r.score_t) - int(r.score_ct),
                 LABEL: int(win["winner"].upper().startswith("T")),  # 'T'/'TERRORIST'
             }
         )

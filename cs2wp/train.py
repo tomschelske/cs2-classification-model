@@ -32,7 +32,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from cs2wp.baseline import predict_t_win
-from cs2wp.features import CORE_FEATURES, LABEL
+from cs2wp.features import CATEGORICAL, CORE_FEATURES, LABEL, SECONDARY_FEATURES
 
 SNAPSHOTS_PATH = Path("data/snapshots.parquet")
 MODEL_PATH = Path("models/model.pkl")
@@ -40,9 +40,20 @@ METRICS_PATH = Path("models/metrics.json")
 CALIB_PATH = Path("models/calibration.png")
 
 SPLIT_KEY = "series_id"   # group by series, NOT match_id (maps share teams)
-FEATURES = CORE_FEATURES  # 7 core features
+NUMERIC = CORE_FEATURES + SECONDARY_FEATURES   # 7 core + 6 secondary
 RANDOM_STATE = 42
 PROBA_CLIP = 1e-3         # keep baseline's hard 0/1 out of log(0)
+
+
+def build_X(df: pd.DataFrame) -> pd.DataFrame:
+    """Numeric feature matrix: core + secondary, plus one-hot categoricals
+    (map). One-hot columns are folded into the numeric matrix so the deployed
+    StandardScaler+LogReg still reduces to a single linear kernel at serve time."""
+    X = df[NUMERIC].copy()
+    X["bomb_planted"] = X["bomb_planted"].astype(int)
+    for cat in CATEGORICAL:
+        X = pd.concat([X, pd.get_dummies(df[cat], prefix=cat).astype(int)], axis=1)
+    return X
 
 
 def _make_logreg():
@@ -118,14 +129,14 @@ def _save_calibration_plot(curves: dict, path: Path) -> None:
 
 def main() -> None:
     df = pd.read_parquet(SNAPSHOTS_PATH)
-    X_all = df[FEATURES].copy()
-    X_all["bomb_planted"] = X_all["bomb_planted"].astype(int)
+    X_all = build_X(df)
+    features = list(X_all.columns)   # full ordered list incl. map_* one-hots
     y_all = df[LABEL].astype(int)
     groups_all = df[SPLIT_KEY]
 
     n_series = groups_all.nunique()
     print(f"Data: {len(df)} snapshots, {df['match_id'].nunique()} maps, "
-          f"{n_series} series | overall T-win {y_all.mean():.3f}")
+          f"{n_series} series | {len(features)} features | overall T-win {y_all.mean():.3f}")
 
     # --- series-level held-out test split ---
     gss = GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=RANDOM_STATE)
@@ -175,7 +186,7 @@ def main() -> None:
 
     # feature importances (gain) for the LightGBM model
     importances = dict(sorted(
-        zip(FEATURES, (lgb.Booster(model_str=lgbm.booster_.model_to_string())
+        zip(features, (lgb.Booster(model_str=lgbm.booster_.model_to_string())
                        .feature_importance(importance_type="gain")).tolist()),
         key=lambda kv: -kv[1]))
 
@@ -192,19 +203,19 @@ def main() -> None:
     print(f"\nHEADLINE  best model = {best_name} vs baseline: "
           f"{headline['accuracy_gain_pp']:+} pp accuracy, "
           f"{headline['log_loss_reduction']:+} log-loss (lower is better)")
-    print("Feature importance (gain):",
-          {k: round(v) for k, v in importances.items()})
+    print("Top feature importance (gain):",
+          {k: round(v) for k, v in list(importances.items())[:12]})
 
     # --- persist ---
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(MODEL_PATH, "wb") as fh:
         pickle.dump({"model": best_model, "model_name": best_name,
-                     "features": FEATURES, "split_key": SPLIT_KEY}, fh)
+                     "features": features, "split_key": SPLIT_KEY}, fh)
     METRICS_PATH.write_text(json.dumps({
         "dataset": {"snapshots": len(df), "maps": int(df["match_id"].nunique()),
                     "series": int(n_series), "t_win_rate": round(float(y_all.mean()), 4)},
         "test_series": sorted(groups_all.iloc[te_idx].unique()),
-        "features": FEATURES,
+        "features": features,
         "models": results,
         "headline_vs_baseline": headline,
         "lightgbm_feature_importance_gain": {k: round(v) for k, v in importances.items()},
