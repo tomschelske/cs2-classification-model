@@ -21,8 +21,9 @@ import numpy as np
 import pandas as pd
 from demoparser2 import DemoParser
 
-from cs2wp.features import (BOMB_TIME_S, ROUND_TIME_S, TEAM_CT, TEAM_T,
-                            TICK_PROPS, _detect_tick_rate, _round_windows)
+from cs2wp.features import (BOMB_TIME_S, GRENADES, ROUND_TIME_S, TEAM_CT,
+                            TEAM_T, TICK_PROPS, _detect_tick_rate, _round_windows)
+from cs2wp.train import build_X
 
 DENSE_S = 1.0  # curve resolution in seconds
 
@@ -62,13 +63,25 @@ def main(rar: str, map_substr: str, round_num: int, out: str) -> None:
 
     td = p.parse_ticks(TICK_PROPS, ticks=ticks)
     is_t, is_ct = td.team_num == TEAM_T, td.team_num == TEAM_CT
-    td["at"] = (td.is_alive & is_t).astype(int)
-    td["ac"] = (td.is_alive & is_ct).astype(int)
+    alive_t, alive_ct = td.is_alive & is_t, td.is_alive & is_ct
+    td["at"] = alive_t.astype(int)
+    td["ac"] = alive_ct.astype(int)
     td["ht"] = td.health.where(is_t, 0)
     td["hc"] = td.health.where(is_ct, 0)
-    agg = td.groupby("tick").agg(alive_t=("at", "sum"), alive_ct=("ac", "sum"),
-                                 hp_t=("ht", "sum"), hp_ct=("hc", "sum"),
-                                 planted=("is_bomb_planted", "max")).reset_index()
+    td["nades"] = td["inventory"].apply(
+        lambda inv: sum(i in GRENADES for i in inv) if inv is not None else 0)
+    td["eqt"] = td.current_equip_value.where(alive_t, 0)
+    td["eqc"] = td.current_equip_value.where(alive_ct, 0)
+    td["ut"] = td.nades.where(alive_t, 0)
+    td["uc"] = td.nades.where(alive_ct, 0)
+    td["kit"] = (td.has_defuser & alive_ct).astype(int)
+    td["st"] = td.team_rounds_total.where(is_t, 0)
+    td["sc"] = td.team_rounds_total.where(is_ct, 0)
+    agg = td.groupby("tick").agg(
+        alive_t=("at", "sum"), alive_ct=("ac", "sum"),
+        hp_t=("ht", "sum"), hp_ct=("hc", "sum"), planted=("is_bomb_planted", "max"),
+        eq_t=("eqt", "sum"), eq_ct=("eqc", "sum"), ut=("ut", "sum"), uc=("uc", "sum"),
+        kit=("kit", "sum"), st=("st", "max"), sc=("sc", "max")).reset_index()
 
     m = pickle.load(open("models/model.pkl", "rb"))
     model, feats = m["model"], m["features"]
@@ -86,8 +99,12 @@ def main(rar: str, map_substr: str, round_num: int, out: str) -> None:
         rows.append({"players_alive_t": r.alive_t, "players_alive_ct": r.alive_ct,
                      "total_health_t": r.hp_t, "total_health_ct": r.hp_ct,
                      "bomb_planted": int(planted), "time_remaining": time_left,
-                     "round_num": round_num, "_t": round(since_start, 1)})
-    X = pd.DataFrame(rows)[feats].copy()
+                     "round_num": round_num,
+                     "equip_value_t": int(r.eq_t), "equip_value_ct": int(r.eq_ct),
+                     "utility_t": int(r.ut), "utility_ct": int(r.uc),
+                     "defuse_kits_ct": int(r.kit), "score_diff": int(r.st) - int(r.sc),
+                     "map": map_name, "_t": round(since_start, 1)})
+    X = build_X(pd.DataFrame(rows)).reindex(columns=feats, fill_value=0)
     probs = model.predict_proba(X)[:, 1]
 
     series = [{"t": rows[i]["_t"], "p": round(float(probs[i]), 4),

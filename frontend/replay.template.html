@@ -174,11 +174,11 @@
       <div class="lg"><span class="sw" style="background:var(--ct)"></span> CT favored (&lt;50%)</div>
       <div class="lg"><span class="sw" style="background:var(--danger)"></span> Bomb event</div>
     </div>
-    Probability from a calibrated <b>logistic-regression</b> model &mdash; 7 live features
-    (players alive &amp; total HP per side, bomb planted, time remaining, round). <b>73.6%</b>
-    accuracy and <b>0.48</b> log-loss on held-out matches, split at the series level so no
-    team appears in both training and test. The curve is this model scoring the round frame
-    by frame; it was never shown this round.
+    Probability from a calibrated <b>logistic-regression</b> model &mdash; 21 features
+    (players alive &amp; HP per side, bomb, time, round, plus <b>equipment value</b>,
+    utility, defuse kits, score, and map). <b>80.3%</b> accuracy and <b>0.42</b> log-loss
+    on held-out matches, split at the series level so no team appears in both training and
+    test. The curve is this model scoring the round frame by frame; it was never shown this round.
   </footer>
 </div>
 
@@ -297,7 +297,7 @@ const DATA = /*__DATA__*/;
     const res=$('result');
     if(t>=DUR-.05){res.classList.add('show');
       res.innerHTML=DIAMOND+' Bomb exploded &mdash; The Mongolz (T) win the round'+
-        '<small>Their last player fell at 1:12 with the model reading 42% &mdash; but the bomb, planted at 0:40, detonated before Monte’s survivor could defuse. Exactly the spot where alive-count alone says CT, and a calibrated model does not.</small>';}
+        '<small>Their last player fell at 1:12 with the model reading 33% &mdash; but the bomb, planted at 0:40, detonated before Monte’s survivor could defuse. Exactly the spot where alive-count alone says CT, and a calibrated model does not.</small>';}
     else res.classList.remove('show');
   }
 
