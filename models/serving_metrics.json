@@ -1,0 +1,19 @@
+{
+  "inference_latency": {
+    "note": "In-process, single prediction, no HTTP. The optimization folds the StandardScaler + LogisticRegression pipeline into one weight vector (P = sigmoid(w.x + b)) and drops per-request pandas DataFrame construction.",
+    "naive_sklearn_dataframe_us": 381.2,
+    "optimized_linear_kernel_us": 0.91,
+    "speedup": "419x"
+  },
+  "http_load_test": {
+    "tool": "ApacheBench 2.3",
+    "uvicorn_workers": 4,
+    "requests": 20000,
+    "concurrency": 50,
+    "keepalive": true,
+    "failed_requests": 0,
+    "throughput_rps": 11709,
+    "latency_ms": {"p50": 4, "p90": 5, "p95": 5, "p99": 9, "max": 37, "mean": 4.27}
+  },
+  "notes": "Measured on an 8-core dev machine. An earlier httpx-based async client reported ~488 rps / 62ms p50, but that was client-bound (client and server contending for CPU on one box); ApacheBench is the authoritative figure. Predictions are byte-identical before and after the kernel optimization."
+}
