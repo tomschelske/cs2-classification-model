@@ -21,19 +21,21 @@ level** so no team appears in both training and test. **21 features**: 7 core
 (alive/HP per side, bomb, time, round) + 6 secondary (equipment value, utility,
 defuse kits, score differential) + a map one-hot.
 
-| | Accuracy | Log-loss |
+| | Accuracy (test) | Log-loss (test) |
 |---|---|---|
 | Man-advantage baseline | 71.4% | 1.974 |
 | **Logistic regression** (deployed) | **80.3%** | **0.415** |
 | LightGBM | 76.9% | 0.467 |
 
-The trained model beats the baseline by **+8.9 pp accuracy** and cuts **log-loss
-79%** — the headline being *calibration*: it turns hard 0/1 guesses into
-probabilities that hold up (see `models/calibration.png`). **Equipment value is
-the single strongest feature** — the eco/full-buy signal a bodies-and-HP model is
-blind to. Served through FastAPI at **11,709 req/s, p99 9 ms** after folding the
-pipeline into a single weight vector (**419× faster** inference than the naive
-sklearn+DataFrame path).
+The real, robust win is **calibration**: the model cuts **log-loss ~79%** (1.97 →
+0.42) versus the baseline's hard 0/1 guesses, turning them into probabilities that
+hold up (see `models/calibration.png`). Accuracy improves too — **80.3%** on the
+held-out test set, **74.6%** cross-validated — though man-advantage already captures
+most of the accuracy, so the accuracy edge over baseline is modest (~4 pp on CV) while
+the calibration gain is large and stable. **Equipment value is the single strongest
+feature** — the eco/full-buy signal a bodies-and-HP model is blind to. Served through
+FastAPI at **11,709 req/s, p99 9 ms** after folding the pipeline into a single weight
+vector (**419× faster** inference than the naive sklearn+DataFrame path).
 
 ## Calibration — why log-loss, not just accuracy
 
@@ -132,6 +134,8 @@ python notebooks/phase5_interpret.py
   it keeps every finer unit intact at once — no round, map, or team's series lands
   on both sides. (The project doc suggested match-level; series-level is stricter,
   since maps within a series are the same two teams.)
-- **A documented baseline.** The man-advantage rule (71.4% accuracy) is the bar.
-  The headline metric is how far the trained model beats it — here **+8.9 pp**
-  accuracy and **−79%** log-loss.
+- **A documented baseline.** The man-advantage rule (71.4% accuracy, 1.97 log-loss)
+  is the bar. Because man-advantage is the dominant signal, the accuracy edge is
+  modest (~4 pp on cross-validation, +8.9 pp on the held-out test); the large, stable
+  win is **log-loss / calibration** (**−79%**) — which is the whole point of a
+  *probability* model.
