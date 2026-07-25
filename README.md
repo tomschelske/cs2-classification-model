@@ -5,6 +5,12 @@ from live game state. Given a snapshot of a round in progress — players alive
 per side, collective health, equipment, bomb state, time remaining — it outputs
 a calibrated probability that the Terrorist side wins the round.
 
+![Animated win-probability replay — The Mongolz vs Monte, Nuke, round 13](docs/replay.gif)
+
+*The model scoring a held-out round it never trained on: a T-side comeback that
+craters to 6%, recovers past 79% after the bomb plant, then wins on the timer.*
+**▶ [Interactive version](https://claude.ai/code/artifact/6eba7aea-3a9b-457d-af11-535a67a42390)** — scrub the full round.
+
 Full plan: [`cs2-win-probability-project.md`](cs2-win-probability-project.md).
 
 ## Results
@@ -28,9 +34,6 @@ the single strongest feature** — the eco/full-buy signal a bodies-and-HP model
 blind to. Served through FastAPI at **11,709 req/s, p99 9 ms** after folding the
 pipeline into a single weight vector (**419× faster** inference than the naive
 sklearn+DataFrame path).
-
-**▶ Live demo — animated win-probability replay of a held-out round:**
-<https://claude.ai/code/artifact/6eba7aea-3a9b-457d-af11-535a67a42390>
 
 ## Calibration — why log-loss, not just accuracy
 
