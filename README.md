@@ -101,8 +101,12 @@ python notebooks/phase5_interpret.py
 
 ## Two things that make or break the project
 
-- **Match-level splits.** Snapshots from one round share a label and are highly
+- **Series-level splits.** Snapshots from one round share a label and are highly
   correlated; a random row split leaks them across train/test and inflates
-  accuracy. Split whole matches.
-- **A documented baseline.** The man-advantage rule (~mid-to-high 60s accuracy)
-  is the bar. The headline metric is how far the trained model beats it.
+  accuracy. Grouping on `series_id` (the whole Bo3/Bo5) is the coarsest bucket, so
+  it keeps every finer unit intact at once — no round, map, or team's series lands
+  on both sides. (The project doc suggested match-level; series-level is stricter,
+  since maps within a series are the same two teams.)
+- **A documented baseline.** The man-advantage rule (71.4% accuracy) is the bar.
+  The headline metric is how far the trained model beats it — here **+8.9 pp**
+  accuracy and **−79%** log-loss.
