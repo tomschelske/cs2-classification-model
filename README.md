@@ -56,8 +56,24 @@ against **observed win rate (y)**. The dashed diagonal is perfect calibration:
 - **The trained models hug the diagonal** — their probabilities mean what they say,
   cutting log-loss to **0.415** (a **79%** reduction).
 
-This is the real value of the project: accuracy rose ~9 points, but the probabilities
-went from uninterpretable to trustworthy. Log-loss is the metric that certifies it.
+This is the real value of the project: the probabilities went from uninterpretable
+to trustworthy. Log-loss is the metric that certifies it.
+
+## Is the dataset big enough?
+
+The independent unit isn't the 22,706 snapshots — those are correlated (~26 per
+round, and rounds in a series share teams) — it's the **16 series / ~897 rounds**.
+To check whether that's enough, a **learning curve** trains on an increasing number
+of series and watches held-out performance ([`notebooks/learning_curve.py`](notebooks/learning_curve.py)):
+
+![Learning curve — accuracy and log-loss vs number of training series](models/learning_curve.png)
+
+Both metrics **plateau** (8 series 79.7% → 12 series 80.3%), and the error bars
+**shrink** as series are added. Read together: the model is closer to
+**feature-limited than data-limited** — more of the same demos would tighten the
+confidence intervals (lower variance) rather than raise the ceiling. Pushing accuracy
+higher would take *new* feature types (player positions / map control), which this
+project deliberately scopes out as future work.
 
 ## Pipeline
 
