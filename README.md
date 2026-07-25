@@ -32,6 +32,28 @@ sklearn+DataFrame path).
 **▶ Live demo — animated win-probability replay of a held-out round:**
 <https://claude.ai/code/artifact/6eba7aea-3a9b-457d-af11-535a67a42390>
 
+## Calibration — why log-loss, not just accuracy
+
+A win-probability model's output is only useful if the number can be trusted: when
+it says **"70%"**, the T side should actually win about **70%** of the time. That
+property is **calibration**, and it's what **log-loss** measures — unlike accuracy,
+which only checks whether the favored side won.
+
+![Calibration curve on the held-out test set](models/calibration.png)
+
+Read the curve by binning predictions and plotting **predicted probability (x)**
+against **observed win rate (y)**. The dashed diagonal is perfect calibration:
+
+- **Baseline (man-advantage)** is a flat line far off the diagonal — it only ever
+  emits `0` or `1`, so when it says "T loses for sure" T still wins ~35% of the
+  time. Confidently wrong, which is why its log-loss is a dismal **1.974** (worse
+  than blindly guessing 50%, which scores 0.693).
+- **The trained models hug the diagonal** — their probabilities mean what they say,
+  cutting log-loss to **0.415** (a **79%** reduction).
+
+This is the real value of the project: accuracy rose ~9 points, but the probabilities
+went from uninterpretable to trustworthy. Log-loss is the metric that certifies it.
+
 ## Pipeline
 
 ```
