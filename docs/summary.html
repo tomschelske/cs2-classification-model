@@ -1,0 +1,224 @@
+<meta charset="utf-8">
+<title>CS2 Round Win-Probability Model — Project Summary</title>
+<style>
+  :root{
+    --bg:#f5f7f9; --surface:#ffffff; --ink:#16202b; --muted:#586573; --faint:#8b98a6;
+    --edge:#e3e8ee; --t:#b1740f; --t-soft:rgba(177,116,15,.10); --ct:#2b74b0;
+    --good:#2f8f5b;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Mono",Menlo,monospace;
+    --measure:44rem;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0b0f16; --surface:#111926; --ink:#e9eef6; --muted:#8a97a8; --faint:#5b6a7e;
+      --edge:#1e2836; --t:#f2a63b; --t-soft:rgba(242,166,59,.13); --ct:#4ea6e6;
+      --good:#54c98a;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f7f9; --surface:#ffffff; --ink:#16202b; --muted:#586573; --faint:#8b98a6;
+    --edge:#e3e8ee; --t:#b1740f; --t-soft:rgba(177,116,15,.10); --ct:#2b74b0; --good:#2f8f5b;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b0f16; --surface:#111926; --ink:#e9eef6; --muted:#8a97a8; --faint:#5b6a7e;
+    --edge:#1e2836; --t:#f2a63b; --t-soft:rgba(242,166,59,.13); --ct:#4ea6e6; --good:#54c98a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0}
+  .page{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    font-size:16px; line-height:1.6; min-height:100vh;
+    padding:clamp(24px,5vw,64px) clamp(16px,5vw,32px) 72px;
+  }
+  .doc{max-width:var(--measure); margin:0 auto}
+  .doc > *{margin:0}
+  .doc > * + *{margin-top:1.15rem}
+
+  .eyebrow{
+    font-family:var(--mono); font-size:12px; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--t); display:flex; align-items:center; gap:10px; font-weight:600;
+  }
+  .eyebrow::before{content:""; width:24px; height:2px; background:var(--t)}
+  h1{
+    font-size:clamp(28px,5vw,42px); line-height:1.08; letter-spacing:-.02em;
+    font-weight:800; text-wrap:balance; margin-top:.5rem;
+  }
+  .lede{font-size:clamp(16px,2.2vw,18px); color:var(--muted); max-width:38rem}
+  .demo{
+    display:inline-flex; align-items:center; gap:9px; font-family:var(--mono); font-size:13px;
+    font-weight:600; text-decoration:none; color:var(--bg); background:var(--t);
+    padding:10px 16px; border-radius:8px; letter-spacing:.02em; margin-top:.4rem;
+  }
+  .demo:hover{filter:brightness(1.06)}
+  .demo:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+
+  h2{
+    font-size:12.5px; font-family:var(--mono); letter-spacing:.16em; text-transform:uppercase;
+    color:var(--faint); font-weight:600; margin-top:2.6rem;
+    padding-bottom:.6rem; border-bottom:1px solid var(--edge);
+  }
+  p{color:var(--ink)} p b{font-weight:650}
+  a{color:var(--ct)}
+  strong{font-weight:700}
+
+  /* metrics band */
+  .stats{
+    margin-top:1.8rem; display:grid; gap:1px; background:var(--edge);
+    border:1px solid var(--edge); border-radius:12px; overflow:hidden;
+    grid-template-columns:repeat(3,1fr);
+  }
+  @media (max-width:520px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--surface); padding:16px 18px}
+  .stat .n{font-family:var(--mono); font-weight:700; font-size:clamp(22px,4vw,28px);
+    letter-spacing:-.01em; font-variant-numeric:tabular-nums; line-height:1.1}
+  .stat .l{font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-top:5px}
+  .stat .d{font-size:11.5px; color:var(--good); font-family:var(--mono); margin-top:3px}
+  .stat.t .n{color:var(--t)}
+
+  /* pipeline / code */
+  pre{
+    background:var(--surface); border:1px solid var(--edge); border-radius:10px;
+    padding:16px 18px; overflow-x:auto; font-family:var(--mono); font-size:12.5px;
+    line-height:1.65; color:var(--ink);
+  }
+  pre .arw{color:var(--t)} pre .c{color:var(--faint)}
+
+  /* tables */
+  .tbl{width:100%; border-collapse:collapse; font-size:14.5px; margin-top:.4rem}
+  .tbl th,.tbl td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--edge)}
+  .tbl th{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); font-weight:600}
+  .tbl td.num{font-family:var(--mono); font-variant-numeric:tabular-nums; text-align:right}
+  .tbl tr.hi td{background:var(--t-soft)}
+  .tbl tr.hi td:first-child{font-weight:700}
+
+  ul{padding-left:0; list-style:none; display:flex; flex-direction:column; gap:.7rem}
+  ul li{position:relative; padding-left:1.4rem; color:var(--ink)}
+  ul li::before{content:""; position:absolute; left:.2rem; top:.62em;
+    width:6px; height:6px; border-radius:50%; background:var(--t)}
+  ul li b{font-weight:650}
+
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:.4rem}
+  .chip{font-family:var(--mono); font-size:12px; padding:5px 10px; border:1px solid var(--edge);
+    border-radius:6px; color:var(--muted); background:var(--surface)}
+
+  /* resume callout */
+  .resume{
+    margin-top:2.6rem; border:1px solid var(--edge); border-top:3px solid var(--t);
+    border-radius:12px; background:var(--surface); padding:22px 24px;
+  }
+  .resume .tag{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--t); font-weight:600}
+  .resume h3{margin:.5rem 0 0; font-size:17px; font-weight:750}
+  .resume .role{font-family:var(--mono); font-size:12.5px; color:var(--muted); margin:.15rem 0 1rem}
+  .resume ul li::before{background:var(--ct)}
+  .resume .alt{margin-top:1.3rem; padding-top:1.1rem; border-top:1px dashed var(--edge)}
+  .resume .alt .cap{font-size:11.5px; color:var(--faint); font-style:italic; margin-bottom:.6rem}
+
+  footer{margin-top:2.8rem; padding-top:1.2rem; border-top:1px solid var(--edge);
+    font-family:var(--mono); font-size:12px; color:var(--faint); display:flex; flex-wrap:wrap; gap:6px 16px}
+</style>
+
+<div class="page"><div class="doc">
+
+  <div class="eyebrow">CS2 &middot; Machine-Learning Case Study</div>
+  <h1>Round Win-Probability Model</h1>
+  <p class="lede">An end-to-end pipeline that predicts, from a live snapshot of a
+    Counter-Strike&nbsp;2 round, the probability the Terrorist side wins it &mdash;
+    parsed from professional match demos, trained with leakage-safe splits, served
+    over an API, and visualized as an animated replay.</p>
+  <a class="demo" href="https://claude.ai/code/artifact/6eba7aea-3a9b-457d-af11-535a67a42390">&#9654;&ensp;Live demo &mdash; animated round replay</a>
+
+  <div class="stats">
+    <div class="stat t"><div class="n">80.3%</div><div class="l">Test accuracy</div><div class="d">+8.9 pp vs baseline</div></div>
+    <div class="stat"><div class="n">0.415</div><div class="l">Log-loss</div><div class="d">&minus;79% vs baseline</div></div>
+    <div class="stat"><div class="n">22,706</div><div class="l">Labeled snapshots</div><div class="d">44 maps &middot; 16 series</div></div>
+    <div class="stat"><div class="n">11,709</div><div class="l">Requests / sec</div><div class="d">9 ms p99</div></div>
+    <div class="stat t"><div class="n">419&times;</div><div class="l">Inference speedup</div><div class="d">381 &micro;s &rarr; 0.9 &micro;s</div></div>
+    <div class="stat"><div class="n">21</div><div class="l">Features</div><div class="d">7 core + 6 secondary + map</div></div>
+  </div>
+
+  <h2>The problem</h2>
+  <p>Given a mid-round game state &mdash; players alive and total HP per side,
+    equipment value, utility and defuse kits, bomb planted, time remaining &mdash;
+    the model outputs one calibrated probability that the T side wins. It's the same
+    class of model behind win-probability graphics in sports broadcasts: the value
+    isn't just <b>who's likely to win</b> but <b>how confident to be</b>, updated on
+    every kill and the plant.</p>
+
+  <h2>Pipeline</h2>
+  <pre><span class="c"># HLTV .dem demos</span>
+parse.py     <span class="c">windowed demoparser2</span>   <span class="arw">&rarr;</span> snapshots.parquet <span class="c">(accumulating)</span>
+features.py  <span class="c">round + tick data</span>      <span class="arw">&rarr;</span> labeled snapshots <span class="c">(21 features)</span>
+train.py     <span class="c">baseline / logreg / GBM</span> <span class="arw">&rarr;</span> model.pkl + metrics.json
+api.py       <span class="c">FastAPI POST /predict</span>   <span class="arw">&rarr;</span> calibrated P(T win)
+frontend     <span class="c">animated replay</span>        <span class="arw">&rarr;</span> live win-probability curve</pre>
+
+  <h2>Data &amp; feature engineering</h2>
+  <ul>
+    <li>Parsed <b>44 maps</b> across <b>16 series</b> (BLAST Bounty S2 + IEM Cologne
+      Major 2026; ~14 teams, 8 maps) into <b>22,706 labeled snapshots</b> &mdash; each
+      round sampled every 5&nbsp;s of live play plus every kill and the bomb plant.</li>
+    <li><b>Memory-bounded parsing.</b> On an 8&nbsp;GB machine the high-level parser
+      OOMs on ~450&nbsp;MB pro demos, so feature extraction requests only the exact
+      ticks it samples (a few hundred per map, not millions) &mdash; a whole demo
+      becomes a few thousand rows in ~5&nbsp;s.</li>
+    <li><b>21 features:</b> 7 core (alive / HP per side, bomb, time, round) + 6
+      secondary (equipment value, utility, defuse kits, score differential) + a map one-hot.</li>
+  </ul>
+
+  <h2>Modeling &amp; evaluation</h2>
+  <table class="tbl">
+    <thead><tr><th>Model</th><th class="num">Accuracy</th><th class="num">Log-loss</th></tr></thead>
+    <tbody>
+      <tr><td>Man-advantage baseline</td><td class="num">71.4%</td><td class="num">1.974</td></tr>
+      <tr class="hi"><td>Logistic regression <span style="color:var(--muted);font-weight:400">(deployed)</span></td><td class="num">80.3%</td><td class="num">0.415</td></tr>
+      <tr><td>LightGBM</td><td class="num">76.9%</td><td class="num">0.467</td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li><b>Leakage-safe splits.</b> Maps within a Bo3 share the same two teams, so the
+      split is done at the <b>series level</b> (GroupKFold on series id) &mdash; no team
+      appears in both training and test.</li>
+    <li><b>Calibration is the headline.</b> The baseline emits hard 0/1 guesses
+      (log-loss 1.97); the trained model emits probabilities that hold up &mdash; when it
+      says 70%, T wins ~70% of the time.</li>
+    <li><b>The simpler model won,</b> chosen by cross-validation: with mostly monotonic
+      features, logistic regression generalized better than gradient boosting.</li>
+  </ul>
+
+  <h2>Engineering highlights</h2>
+  <ul>
+    <li><b>Serving optimization (419&times;).</b> The deployed model is linear, so the
+      scaler + classifier fold into one weight vector &mdash; P&nbsp;=&nbsp;&sigma;(w&middot;x&nbsp;+&nbsp;b) &mdash;
+      served from an async handler as a single NumPy dot product instead of a pandas
+      DataFrame per request. Byte-identical predictions; latency 381&nbsp;&micro;s&nbsp;&rarr;&nbsp;0.9&nbsp;&micro;s,
+      sustaining <b>11,709 req/s at 9&nbsp;ms p99</b> (0 failures over 20k).</li>
+    <li><b>Parser reliability.</b> Diagnosed and pinned around a parser regression whose
+      second parse call per process crashed the interpreter, and validated round / event
+      schemas against real data (recording artifacts, warmup filtering).</li>
+  </ul>
+
+  <h2>What the model learned</h2>
+  <ul>
+    <li><b>Team economy is the strongest signal</b> &mdash; equipment value outranks both
+      bodies and HP. At an even 5v5 full-HP, being on an <b>eco drops win probability to
+      ~9%</b>: equal men with no guns is a near-lost round.</li>
+    <li><b>A bomb plant is worth ~+20&nbsp;pp</b> to the T side, men and HP fixed.</li>
+    <li><b>A man advantage compounds late</b> &mdash; a 3v2 (~85%) is a far bigger edge than
+      a 5v4 (~75%).</li>
+    <li><b>Health matters at equal bodies</b> &mdash; a damaged CT side swings ~+27&nbsp;pp toward T.</li>
+  </ul>
+
+  <h2>Tech stack</h2>
+  <div class="chips">
+    <span class="chip">Python 3.13</span><span class="chip">demoparser2 / awpy</span>
+    <span class="chip">pandas</span><span class="chip">scikit-learn</span>
+    <span class="chip">LightGBM</span><span class="chip">FastAPI / uvicorn</span>
+    <span class="chip">matplotlib</span><span class="chip">HTML Canvas</span><span class="chip">Parquet</span>
+  </div>
+
+  <footer>
+    <span>CS2 Round Win-Probability Model</span><span>Python &middot; scikit-learn &middot; FastAPI</span>
+  </footer>
+
+</div></div>
