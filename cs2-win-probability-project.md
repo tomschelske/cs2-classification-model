@@ -214,21 +214,7 @@ A small frontend that replays a held-out round, showing the win-probability curv
 
 ---
 
-## 9. Resume Framing
-
-Once complete, the project supports lines of this shape — with real numbers substituted from `metrics.json`:
-
-> **CS2 Round Win-Probability Model** — Python, LightGBM, FastAPI, React
-> - Built an end-to-end ML pipeline parsing **[N]** professional Counter-Strike 2 demo files into **[N]** labeled game-state snapshots
-> - Trained a gradient-boosted classifier achieving **[X]%** accuracy and **[Y]** log-loss, outperforming a man-advantage baseline by **[Z]** percentage points
-> - Reduced corpus parse time from **[A]** to **[B]** minutes via multiprocessing and selective property extraction
-> - Served predictions through a FastAPI endpoint sustaining **[N]** req/s at **[X]ms** p99 latency
-
-Fill the brackets only with numbers you actually measured and can defend under questioning.
-
----
-
-## 10. Scope Discipline
+## 9. Scope Discipline
 
 Things that will tempt you and should be deferred to a "future work" section rather than attempted now:
 
@@ -242,7 +228,7 @@ A finished project with seven features and honest metrics is worth considerably 
 
 ---
 
-## 11. Open Questions to Resolve During Phase 1
+## 10. Open Questions to Resolve During Phase 1
 
 - What exactly does one row of `dem.ticks` represent, and at what frequency are ticks recorded in the demo?
 - How is round time represented — absolute tick, or seconds since freeze-time end?
