@@ -1,8 +1,12 @@
-"""api.py — model.pkl -> FastAPI POST /predict (Phase 6).
+"""api.py — FastAPI backend for the model + dashboard.
 
-One endpoint. Takes a game-state snapshot, returns the calibrated probability
-that the T side wins the round. Load-test it and record p50/p99 latency +
-sustained req/s (see notebooks/phase6_loadtest.py).
+Endpoints:
+  POST /predict  — calibrated P(T win) for a game state (drives the calculator)
+  GET  /round    — the precomputed featured-round replay + per-kill leverage
+  GET  /health   — status
+
+Takes a game-state snapshot, returns the calibrated probability that the T side
+wins the round. Load-tested for p50/p99 latency (see notebooks/phase6_loadtest.py).
 
 Serving optimization: the deployed model is a StandardScaler + LogisticRegression
 pipeline, i.e. a linear model. Rather than build a pandas DataFrame and call
@@ -18,6 +22,7 @@ Docs: http://localhost:8000/docs
 
 from __future__ import annotations
 
+import json
 import pickle
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -27,6 +32,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
 MODEL_PATH = Path("models/model.pkl")
+ROUND_PATH = Path("data/round_navi_falcons.json")
 
 _STATE: dict = {}
 
@@ -53,6 +59,7 @@ async def lifespan(app: FastAPI):
     _STATE["features"] = bundle["features"]
     _STATE["name"] = bundle.get("model_name", "model")
     _STATE["kernel"] = _build_linear_kernel(bundle["model"])
+    _STATE["round"] = json.loads(ROUND_PATH.read_text()) if ROUND_PATH.exists() else None
     yield
     _STATE.clear()
 
@@ -61,24 +68,25 @@ app = FastAPI(title="CS2 Round Win-Probability", version="1.0.0", lifespan=lifes
 
 
 class GameState(BaseModel):
-    """A single round snapshot — core + secondary features, plus the map."""
+    """A single round snapshot. Every field has a sensible default so the
+    calculator can send just the controls it exposes and let the rest ride."""
 
-    # core
-    players_alive_t: int = Field(ge=0, le=5, examples=[2])
-    players_alive_ct: int = Field(ge=0, le=5, examples=[1])
-    total_health_t: int = Field(ge=0, le=500, examples=[200])
-    total_health_ct: int = Field(ge=0, le=500, examples=[81])
-    bomb_planted: bool = Field(examples=[True])
-    time_remaining: float = Field(ge=0, examples=[32.0])
-    round_num: int = Field(ge=1, examples=[13])
-    # secondary
-    equip_value_t: int = Field(ge=0, examples=[9200])
-    equip_value_ct: int = Field(ge=0, examples=[3400])
-    utility_t: int = Field(ge=0, examples=[3])
-    utility_ct: int = Field(ge=0, examples=[1])
-    defuse_kits_ct: int = Field(ge=0, le=5, examples=[1])
-    score_diff: int = Field(examples=[2])
-    map: str = Field(examples=["de_nuke"], description="e.g. de_mirage, de_nuke")
+    # core (the calculator's primary controls)
+    players_alive_t: int = Field(5, ge=0, le=5)
+    players_alive_ct: int = Field(5, ge=0, le=5)
+    total_health_t: int = Field(500, ge=0, le=500)
+    total_health_ct: int = Field(500, ge=0, le=500)
+    bomb_planted: bool = False
+    time_remaining: float = Field(60.0, ge=0)
+    equip_value_t: int = Field(4000, ge=0)
+    equip_value_ct: int = Field(4000, ge=0)
+    # context (defaulted; behind the calculator's "advanced" toggle)
+    utility_t: int = Field(0, ge=0)
+    utility_ct: int = Field(0, ge=0)
+    defuse_kits_ct: int = Field(0, ge=0, le=5)
+    score_diff: int = 0
+    round_num: int = Field(12, ge=1)
+    map: str = Field("de_dust2", description="e.g. de_dust2, de_mirage, de_nuke")
 
 
 class Prediction(BaseModel):
@@ -106,7 +114,13 @@ def _proba(state: GameState) -> float:
 def health() -> dict:
     return {"status": "ok", "model": _STATE.get("name"),
             "fast_kernel": _STATE.get("kernel") is not None,
-            "features": _STATE.get("features")}
+            "round_loaded": _STATE.get("round") is not None}
+
+
+@app.get("/round")
+def featured_round() -> dict:
+    """The precomputed featured-round replay (curve + events with leverage)."""
+    return _STATE.get("round") or {}
 
 
 @app.post("/predict", response_model=Prediction)
