@@ -1,0 +1,323 @@
+<meta charset="utf-8">
+<title>CS2 Win Probability — Live Dashboard</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#090d14; --panel:#111926; --panel2:#0d141f; --edge:#1d2836;
+    --ink:#e9eef6; --muted:#8494a8; --faint:#4b5a6e;
+    --t:#f2a63b; --t-dim:#8a6520; --t-soft:rgba(242,166,59,.14);
+    --ct:#4ea6e6; --ct-dim:#2b6690; --ct-soft:rgba(78,166,230,.14);
+    --danger:#ff5a3c; --good:#54c98a; --grid:rgba(255,255,255,.055);
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box} body{margin:0}
+  .wrap{max-width:1040px; margin:0 auto; padding:clamp(18px,4vw,40px) clamp(14px,4vw,26px) 60px;
+    font-family:var(--sans); color:var(--ink);
+    background:radial-gradient(1200px 600px at 75% -10%, rgba(78,166,230,.08), transparent 60%),
+      radial-gradient(900px 500px at 5% 105%, rgba(242,166,59,.06), transparent 55%), var(--bg);
+    min-height:100vh;}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--muted); display:flex; align-items:center; gap:10px;}
+  .eyebrow::before{content:""; width:24px; height:1px; background:var(--faint)}
+  h1{font-size:clamp(24px,4.5vw,38px); line-height:1.05; margin:.3em 0 .1em; letter-spacing:-.02em; font-weight:800;}
+  h1 .vs{color:var(--faint); font-weight:500; margin:0 .3em; font-size:.6em; vertical-align:.12em}
+  h1 .fal{color:var(--t)} h1 .navi{color:var(--ct)}
+  .sub{color:var(--muted); font-size:14px; max-width:62ch; line-height:1.5; margin:.2em 0 0}
+  h2{font-size:12px; font-family:var(--mono); letter-spacing:.16em; text-transform:uppercase; color:var(--faint);
+    font-weight:600; margin:2.6rem 0 1rem; padding-bottom:.5rem; border-bottom:1px solid var(--edge);
+    display:flex; justify-content:space-between; align-items:baseline;}
+  h2 .note{color:var(--muted); font-weight:500; letter-spacing:.02em; text-transform:none; font-size:12px}
+
+  .readout{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:16px; margin:16px 0 12px;
+    padding:14px 18px; background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--edge); border-radius:12px;}
+  .prob{font-family:var(--mono); font-weight:700; font-size:clamp(30px,6vw,48px); line-height:1; font-variant-numeric:tabular-nums}
+  .prob small{font-size:.42em; color:var(--muted); font-weight:500}
+  .favor{font-family:var(--mono); font-size:12px; letter-spacing:.12em; text-transform:uppercase; margin-top:6px; color:var(--muted)}
+  .favor b{font-weight:700}
+  .clock{text-align:right; font-family:var(--mono)}
+  .clock .t{font-size:24px; font-weight:700; font-variant-numeric:tabular-nums}
+  .clock .lab{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+  .clock .bomb{color:var(--danger); font-weight:700}
+
+  .chartwrap{position:relative; border:1px solid var(--edge); border-radius:12px; overflow:hidden; background:var(--panel2)}
+  canvas{display:block; width:100%; height:auto}
+  .controls{display:flex; align-items:center; gap:14px; margin:14px 0 20px}
+  .play{font-family:var(--mono); font-size:13px; letter-spacing:.05em; text-transform:uppercase; color:#08111c;
+    background:var(--t); border:none; border-radius:8px; padding:10px 16px; cursor:pointer; font-weight:700;
+    min-width:112px; justify-content:center; display:flex; gap:8px; align-items:center;}
+  .play:hover{filter:brightness(1.08)} .play:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+  .scrub{flex:1; accent-color:var(--t); height:4px}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:20px}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr}}
+  .side{background:var(--panel); border:1px solid var(--edge); border-radius:11px; padding:14px 16px}
+  .side.t{border-top:2px solid var(--t)} .side.ct{border-top:2px solid var(--ct)}
+  .side h3{margin:0 0 11px; font-family:var(--mono); font-size:12px; letter-spacing:.1em; text-transform:uppercase; display:flex; justify-content:space-between}
+  .side.t h3{color:var(--t)} .side.ct h3{color:var(--ct)}
+  .side h3 .team{color:var(--muted); font-weight:500}
+  .dots{display:flex; gap:7px; margin-bottom:11px}
+  .dot{width:100%; height:9px; border-radius:3px; background:var(--edge); transition:background .2s,box-shadow .2s}
+  .side.t .dot.on{background:var(--t); box-shadow:0 0 10px var(--t-soft)}
+  .side.ct .dot.on{background:var(--ct); box-shadow:0 0 10px var(--ct-soft)}
+  .hp{display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:12px; color:var(--muted)}
+  .hpbar{flex:1; height:6px; border-radius:3px; background:var(--edge); overflow:hidden}
+  .hpfill{height:100%; transition:width .2s} .side.t .hpfill{background:var(--t)} .side.ct .hpfill{background:var(--ct)}
+  .hpval{color:var(--ink); font-variant-numeric:tabular-nums; min-width:64px; text-align:right}
+
+  .feed{background:var(--panel); border:1px solid var(--edge); border-radius:11px; padding:6px; margin-bottom:8px}
+  .feed h4{margin:8px 12px 6px; font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+  .row{font-family:var(--mono); font-size:13px; display:flex; align-items:center; gap:10px; padding:7px 12px; border-radius:7px; opacity:.28; transition:opacity .25s,background .25s}
+  .row.on{opacity:1} .row.now{background:rgba(255,255,255,.05)}
+  .row .tag{font-size:10px; letter-spacing:.06em; padding:2px 6px; border-radius:4px; min-width:44px; text-align:center}
+  .row.t .tag{background:var(--t-soft); color:var(--t)} .row.ct .tag{background:var(--ct-soft); color:var(--ct)}
+  .row.evt .tag{background:rgba(255,90,60,.16); color:var(--danger)}
+  .row .txt{flex:1} .row .txt b{font-weight:700} .row.t .txt b{color:var(--t)} .row.ct .txt b{color:var(--ct)}
+  .lev{font-variant-numeric:tabular-nums; font-size:12px; padding:1px 7px; border-radius:20px; border:1px solid var(--edge)}
+  .lev.pos{color:var(--t)} .lev.neg{color:var(--ct)}
+  .lev.big{font-weight:700; border-color:currentColor}
+  .caption{color:var(--faint); font-size:12px; font-family:var(--mono); margin:0 0 22px; padding:0 4px}
+
+  /* calculator */
+  .calc{display:grid; grid-template-columns:1.1fr 1fr; gap:18px; align-items:start}
+  @media(max-width:760px){.calc{grid-template-columns:1fr}}
+  .calc-out{background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--edge); border-radius:14px; padding:22px; position:sticky; top:16px}
+  .calc-out .big{font-family:var(--mono); font-weight:700; font-size:clamp(44px,10vw,68px); line-height:1; font-variant-numeric:tabular-nums}
+  .calc-out .big small{font-size:.36em; color:var(--muted)}
+  .gauge{height:10px; border-radius:6px; margin:16px 0 8px; background:linear-gradient(90deg,var(--ct) 0%,var(--ct) 50%,var(--t) 50%,var(--t) 100%); position:relative; opacity:.25}
+  .gaugefill{position:absolute; inset:0; border-radius:6px; background:var(--edge)}
+  .marker{position:absolute; top:-3px; width:3px; height:16px; border-radius:2px; background:var(--ink); transition:left .15s}
+  .calc-out .lbl{font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+  .ctrls{display:flex; flex-direction:column; gap:16px}
+  .ctrl label{font-family:var(--mono); font-size:12px; color:var(--muted); display:flex; justify-content:space-between; margin-bottom:6px}
+  .ctrl label b{color:var(--ink); font-variant-numeric:tabular-nums}
+  .ctrl input[type=range]{width:100%; height:4px}
+  .ctrl.t input[type=range]{accent-color:var(--t)} .ctrl.ct input[type=range]{accent-color:var(--ct)}
+  .pair{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .presets{display:flex; gap:6px; margin-top:6px}
+  .presets button{font-family:var(--mono); font-size:11px; padding:3px 8px; border-radius:5px; border:1px solid var(--edge); background:var(--panel); color:var(--muted); cursor:pointer}
+  .presets button:hover{color:var(--ink); border-color:var(--faint)}
+  .row2{display:flex; gap:16px; align-items:center; flex-wrap:wrap}
+  .toggle{display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12px; color:var(--muted)}
+  select{font-family:var(--mono); font-size:12px; background:var(--panel); color:var(--ink); border:1px solid var(--edge); border-radius:6px; padding:5px 8px}
+
+  footer{border-top:1px solid var(--edge); margin-top:32px; padding-top:16px; color:var(--muted); font-size:13px; line-height:1.6}
+  footer b{color:var(--ink); font-weight:600}
+  .loading{color:var(--muted); font-family:var(--mono); padding:40px 0; text-align:center}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">CS2 · Live Win-Probability Model</div>
+  <h1><span class="navi">NaVi</span><span class="vs">vs</span><span class="fal">Falcons</span></h1>
+  <p class="sub">A calibrated model scoring a held-out round in real time, plus a live
+    predictor you can play with. The win-probability curve, the per-kill impact, and the
+    calculator are all the same model, served from a FastAPI backend.</p>
+
+  <h2><span>The round · Dust2 · Round 8</span><span class="note" id="r-context">loading…</span></h2>
+  <div id="replay">
+    <div class="readout">
+      <div class="prob" id="prob">–<small>%</small></div>
+      <div class="favor" id="favor">&nbsp;</div>
+      <div class="clock"><div class="t" id="clk">0:00</div><div class="lab" id="clklab">round time</div></div>
+    </div>
+    <div class="chartwrap"><canvas id="chart" aria-label="Win probability over the round"></canvas></div>
+    <div class="controls">
+      <button class="play" id="play">▶ Play</button>
+      <input class="scrub" id="scrub" type="range" min="0" max="1000" value="0" aria-label="Scrub timeline">
+    </div>
+    <div class="grid2">
+      <div class="side t"><h3><span>T · Falcons</span><span class="team">attacking</span></h3>
+        <div class="dots" id="dots-t"></div>
+        <div class="hp"><span>HP</span><div class="hpbar"><div class="hpfill" id="hp-t"></div></div><span class="hpval" id="hpv-t">500</span></div></div>
+      <div class="side ct"><h3><span>CT · NaVi</span><span class="team">defending</span></h3>
+        <div class="dots" id="dots-ct"></div>
+        <div class="hp"><span>HP</span><div class="hpbar"><div class="hpfill" id="hp-ct"></div></div><span class="hpval" id="hpv-ct">500</span></div></div>
+    </div>
+    <div class="feed"><h4>Round feed · with per-kill leverage</h4><div id="feed"></div></div>
+    <p class="caption">Leverage = how much each duel swung win probability — scored if the
+      victim dies (what happened) vs. if the attacker had died instead. It measures the
+      moment, it doesn’t re-simulate the round.</p>
+  </div>
+
+  <h2><span>The model · try it yourself</span><span class="note">economy is the strongest signal — drag it</span></h2>
+  <div class="calc">
+    <div class="calc-out">
+      <div class="lbl">P(Falcons / T win)</div>
+      <div class="big" id="c-prob">–<small>%</small></div>
+      <div class="gauge"><div class="gaugefill" id="c-fill"></div><div class="marker" id="c-mark"></div></div>
+      <div class="favor" id="c-favor">&nbsp;</div>
+    </div>
+    <div class="ctrls">
+      <div class="pair">
+        <div class="ctrl t"><label>T alive <b id="v_at">5</b></label><input type="range" id="c_alive_t" min="0" max="5" value="5"></div>
+        <div class="ctrl ct"><label>CT alive <b id="v_ac">5</b></label><input type="range" id="c_alive_ct" min="0" max="5" value="5"></div>
+      </div>
+      <div class="pair">
+        <div class="ctrl t"><label>T economy <b id="v_et">$22,500</b></label><input type="range" id="c_eq_t" min="0" max="25000" step="500" value="22500">
+          <div class="presets" data-side="t"><button data-v="1500">Eco</button><button data-v="12500">Force</button><button data-v="22500">Full</button></div></div>
+        <div class="ctrl ct"><label>CT economy <b id="v_ec">$22,500</b></label><input type="range" id="c_eq_ct" min="0" max="25000" step="500" value="22500">
+          <div class="presets" data-side="ct"><button data-v="1500">Eco</button><button data-v="12500">Force</button><button data-v="22500">Full</button></div></div>
+      </div>
+      <div class="pair">
+        <div class="ctrl t"><label>T total HP <b id="v_ht">500</b></label><input type="range" id="c_hp_t" min="0" max="500" step="10" value="500"></div>
+        <div class="ctrl ct"><label>CT total HP <b id="v_hc">500</b></label><input type="range" id="c_hp_ct" min="0" max="500" step="10" value="500"></div>
+      </div>
+      <div class="row2">
+        <label class="toggle"><input type="checkbox" id="c_bomb"> Bomb planted</label>
+        <div class="ctrl" style="flex:1; min-width:160px"><label>Time remaining <b id="v_time">60s</b></label><input type="range" id="c_time" min="0" max="115" step="5" value="60"></div>
+        <label class="toggle">Map
+          <select id="c_map">
+            <option value="de_dust2" selected>Dust2</option><option value="de_mirage">Mirage</option>
+            <option value="de_inferno">Inferno</option><option value="de_nuke">Nuke</option>
+            <option value="de_anubis">Anubis</option><option value="de_ancient">Ancient</option>
+            <option value="de_overpass">Overpass</option>
+          </select></label>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Model: calibrated <b>logistic regression</b> — <b>80.3%</b> test / <b>74.6%</b>
+    cross-validated accuracy, <b>0.42</b> log-loss. Served from a FastAPI backend; the
+    replay is precomputed, the calculator calls <b>POST /predict</b> live.
+  </footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+
+/* ============ CALCULATOR (POST /predict) ============ */
+(function(){
+  const ids=['c_alive_t','c_alive_ct','c_eq_t','c_eq_ct','c_hp_t','c_hp_ct','c_bomb','c_time','c_map'];
+  const money=n=>'$'+Number(n).toLocaleString();
+  function sync(){
+    $('v_at').textContent=$('c_alive_t').value; $('v_ac').textContent=$('c_alive_ct').value;
+    $('v_et').textContent=money($('c_eq_t').value); $('v_ec').textContent=money($('c_eq_ct').value);
+    $('v_ht').textContent=$('c_hp_t').value; $('v_hc').textContent=$('c_hp_ct').value;
+    $('v_time').textContent=$('c_time').value+'s';
+  }
+  function state(){return{
+    players_alive_t:+$('c_alive_t').value, players_alive_ct:+$('c_alive_ct').value,
+    total_health_t:+$('c_hp_t').value, total_health_ct:+$('c_hp_ct').value,
+    equip_value_t:+$('c_eq_t').value, equip_value_ct:+$('c_eq_ct').value,
+    bomb_planted:$('c_bomb').checked, time_remaining:+$('c_time').value, map:$('c_map').value};}
+  let timer=null, seq=0;
+  async function predict(){
+    const my=++seq;
+    try{
+      const r=await fetch('/predict',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state())});
+      const p=(await r.json()).t_win_prob;
+      if(my!==seq) return;                     // a newer request superseded this one
+      const pct=Math.round(p*100), t=p>=.5;
+      $('c-prob').innerHTML=pct+'<small>%</small>'; $('c-prob').style.color=t?'var(--t)':'var(--ct)';
+      $('c-fill').style.width=(100-pct)+'%'; $('c-mark').style.left=pct+'%';
+      const edge=Math.abs(p-.5)*200, word=edge<8?'coin flip':(edge<40?'':'heavy ')+(t?'Falcons (T)':'NaVi (CT)')+' favored';
+      $('c-favor').innerHTML=edge<8?'coin flip':word;
+    }catch(e){ if(my===seq) $('c-favor').textContent='backend unavailable'; }
+  }
+  function onInput(){ sync(); clearTimeout(timer); timer=setTimeout(predict,60); }
+  ids.forEach(id=>$(id).addEventListener('input',onInput));
+  document.querySelectorAll('.presets').forEach(p=>p.addEventListener('click',e=>{
+    if(e.target.dataset.v){ $(p.dataset.side==='t'?'c_eq_t':'c_eq_ct').value=e.target.dataset.v; onInput(); }
+  }));
+  sync(); predict();
+})();
+
+/* ============ REPLAY (GET /round) ============ */
+(async function(){
+  let DATA;
+  try{ DATA=await (await fetch('/round')).json(); }
+  catch(e){ $('r-context').textContent='could not load round'; return; }
+  if(!DATA || !DATA.series){ $('r-context').textContent='no round data'; return; }
+
+  const S=DATA.series, EV=DATA.events.slice(), DUR=DATA.meta.duration;
+  const plantT=(EV.find(e=>e.type==='plant')||{}).t;
+  EV.sort((a,b)=>a.t-b.t);
+  const maxLev=Math.max(1,...EV.filter(e=>e.leverage).map(e=>Math.abs(e.leverage.swing_pp)));
+  $('r-context').textContent=`${S.length} frames · winner ${DATA.meta.winner} (${DATA.meta.reason.replace('_',' ')})`;
+
+  const cv=$('chart'), ctx=cv.getContext('2d');
+  let W=0,H=0; const DPR=Math.min(window.devicePixelRatio||1,2);
+  const PADL=44,PADR=16,PADT=18,PADB=28;
+  const px=t=>PADL+(t/DUR)*(W-PADL-PADR), py=p=>PADT+(1-p)*(H-PADT-PADB);
+  const ts=S.map(d=>d.t), ps=S.map(d=>d.p);
+  function pAt(t){ if(t<=ts[0])return ps[0]; if(t>=ts[ts.length-1])return ps[ps.length-1];
+    for(let i=0;i<ts.length-1;i++)if(t>=ts[i]&&t<=ts[i+1]){const f=(t-ts[i])/((ts[i+1]-ts[i])||1);return ps[i]+f*(ps[i+1]-ps[i]);} return ps[ps.length-1]; }
+  function stateAt(t){let s=S[0]; for(const x of S){if(x.t<=t+1e-6)s=x; else break;} return s;}
+
+  function resize(){ W=cv.clientWidth; H=Math.max(300,Math.round(W*0.42));
+    cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); cv.style.height=H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0); draw(cur); }
+
+  function draw(t){
+    ctx.clearRect(0,0,W,H); const mid=py(0.5);
+    ctx.font='11px ui-monospace,Menlo,monospace'; ctx.fillStyle='#5b6a7e'; ctx.textAlign='right'; ctx.textBaseline='middle';
+    [0,.25,.5,.75,1].forEach(p=>{const y=py(p); ctx.beginPath();ctx.moveTo(PADL,y);ctx.lineTo(W-PADR,y);
+      ctx.strokeStyle=p===.5?'rgba(255,255,255,.16)':'rgba(255,255,255,.05)'; ctx.setLineDash(p===.5?[5,5]:[]); ctx.stroke();
+      ctx.fillText(Math.round(p*100)+'%',PADL-8,y);});
+    ctx.setLineDash([]); ctx.textAlign='center'; ctx.textBaseline='top';
+    for(let s=0;s<=DUR;s+=20){ctx.fillStyle='#5b6a7e'; ctx.fillText(s+'s',px(s),H-PADB+7);}
+    const pts=S.map(d=>[px(d.t),py(d.p)]);
+    ctx.save();ctx.beginPath();ctx.rect(PADL,PADT,W-PADL-PADR,mid-PADT);ctx.clip();
+    ctx.beginPath();ctx.moveTo(pts[0][0],py(0));pts.forEach(p=>ctx.lineTo(p[0],p[1]));ctx.lineTo(pts[pts.length-1][0],H);ctx.lineTo(pts[0][0],H);ctx.closePath();
+    let g=ctx.createLinearGradient(0,PADT,0,mid);g.addColorStop(0,'rgba(242,166,59,.32)');g.addColorStop(1,'rgba(242,166,59,.04)');ctx.fillStyle=g;ctx.fill();ctx.restore();
+    ctx.save();ctx.beginPath();ctx.rect(PADL,mid,W-PADL-PADR,H-PADB-mid);ctx.clip();
+    ctx.beginPath();ctx.moveTo(pts[0][0],0);pts.forEach(p=>ctx.lineTo(p[0],p[1]));ctx.lineTo(pts[pts.length-1][0],0);ctx.closePath();
+    g=ctx.createLinearGradient(0,mid,0,H-PADB);g.addColorStop(0,'rgba(78,166,230,.05)');g.addColorStop(1,'rgba(78,166,230,.32)');ctx.fillStyle=g;ctx.fill();ctx.restore();
+    ctx.lineWidth=2.4;ctx.lineJoin='round';ctx.lineCap='round';
+    for(let i=0;i<pts.length-1;i++){const above=(ps[i]+ps[i+1])/2>=.5; ctx.strokeStyle=above?'#f2a63b':'#4ea6e6';
+      ctx.shadowColor=above?'rgba(242,166,59,.5)':'rgba(78,166,230,.5)';ctx.shadowBlur=7;
+      ctx.beginPath();ctx.moveTo(pts[i][0],pts[i][1]);ctx.lineTo(pts[i+1][0],pts[i+1][1]);ctx.stroke();}
+    ctx.shadowBlur=0;
+    EV.forEach(e=>{const x=px(e.t),y=py(pAt(e.t));
+      if(e.type==='kill'){ const r=e.leverage?3+3.5*Math.abs(e.leverage.swing_pp)/maxLev:3;
+        ctx.fillStyle=e.side==='T'?'#f2a63b':'#4ea6e6'; ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();
+        ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=1;ctx.stroke(); }
+      else{const c=e.type==='explode'?'#ff5a3c':'#f2a63b'; ctx.strokeStyle=c;ctx.setLineDash([3,4]);ctx.lineWidth=1.2;
+        ctx.beginPath();ctx.moveTo(x,PADT);ctx.lineTo(x,H-PADB);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle=c;ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI/4);ctx.fillRect(-4.5,-4.5,9,9);ctx.restore();}});
+    const hx=px(t),hy=py(pAt(t)); ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(hx,PADT);ctx.lineTo(hx,H-PADB);ctx.stroke();
+    ctx.fillStyle=pAt(t)>=.5?'#f2a63b':'#4ea6e6';ctx.beginPath();ctx.arc(hx,hy,5,0,7);ctx.fill();
+    ctx.fillStyle='#090d14';ctx.beginPath();ctx.arc(hx,hy,2,0,7);ctx.fill();
+  }
+
+  const dotsT=$('dots-t'),dotsCt=$('dots-ct');
+  for(let i=0;i<5;i++){dotsT.appendChild(Object.assign(document.createElement('div'),{className:'dot'}));
+    dotsCt.appendChild(Object.assign(document.createElement('div'),{className:'dot'}));}
+  const fmt=t=>{const m=Math.floor(t/60),s=Math.floor(t%60);return m+':'+String(s).padStart(2,'0');};
+
+  function update(t){
+    const p=pAt(t), st=stateAt(t);
+    $('prob').innerHTML=Math.round(p*100)+'<small>%</small>'; $('prob').style.color=p>=.5?'var(--t)':'var(--ct)';
+    const edge=Math.abs(p-.5)*200, who=p>=.5?'Falcons':'NaVi';
+    $('favor').innerHTML=edge<6?'coin flip':(edge<40?'':'heavy ')+'<b>'+who+'</b> favored';
+    if(st.planted&&plantT!=null){const bl=Math.max(0,40-(t-plantT)); $('clk').innerHTML='<span class="bomb">'+bl.toFixed(0)+'s</span>';$('clklab').textContent='bomb timer';}
+    else{$('clk').textContent=fmt(t);$('clklab').textContent='round time';}
+    [['t',st.alive_t,st.hp_t],['ct',st.alive_ct,st.hp_ct]].forEach(([sd,al,hp])=>{
+      document.querySelectorAll('#dots-'+sd+' .dot').forEach((d,i)=>d.classList.toggle('on',i<al));
+      $('hp-'+sd).style.width=(hp/500*100)+'%'; $('hpv-'+sd).textContent=hp+' / 500';});
+    const fe=$('feed');fe.innerHTML='';
+    EV.forEach(e=>{const on=e.t<=t+1e-6, isEvt=e.type!=='kill';
+      const row=document.createElement('div'); row.className='row '+(isEvt?'evt':e.side.toLowerCase())+(on?' on':'');
+      const tag=isEvt?(e.type==='plant'?'PLANT':e.type==='defuse'?'DEFUSE':'BOMB'):e.side;
+      let txt = e.type==='kill' ? '<b>'+e.attacker+'</b> ✕ '+e.victim : '<b>'+e.text+'</b>';
+      let lev=''; if(e.leverage){const s=e.leverage.swing_pp, big=Math.abs(s)>=40;
+        lev='<span class="lev '+(s>=0?'pos':'neg')+(big?' big':'')+'">'+(s>=0?'+':'')+s.toFixed(0)+' pp</span>';}
+      row.innerHTML='<span class="tag">'+tag+'</span><span class="txt">'+txt+'</span>'+lev+'<span style="color:var(--faint)">'+fmt(e.t)+'</span>';
+      fe.appendChild(row);});
+  }
+
+  let cur=0, playing=false, raf=null, last=0; const PLAY_SECONDS=22;
+  const scrub=$('scrub'), playBtn=$('play');
+  function set(t){cur=Math.max(0,Math.min(DUR,t));draw(cur);update(cur);scrub.value=Math.round(cur/DUR*1000);}
+  function tick(tsn){ if(!playing)return; if(!last)last=tsn; const dt=(tsn-last)/1000;last=tsn;
+    set(cur+dt*(DUR/PLAY_SECONDS)); if(cur>=DUR){playing=false;playBtn.innerHTML='↻ Replay';return;} raf=requestAnimationFrame(tick);}
+  function play(){if(cur>=DUR)set(0); playing=true;last=0;playBtn.innerHTML='❚❚ Pause';raf=requestAnimationFrame(tick);}
+  function pause(){playing=false;playBtn.innerHTML='▶ Play';if(raf)cancelAnimationFrame(raf);}
+  playBtn.addEventListener('click',()=>playing?pause():play());
+  scrub.addEventListener('input',()=>{pause();set(cur=DUR*scrub.value/1000);});
+  window.addEventListener('resize',resize); resize();
+  if(window.matchMedia('(prefers-reduced-motion:reduce)').matches) set(DUR); else { set(0); setTimeout(play,600); }
+})();
+</script>

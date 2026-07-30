@@ -29,6 +29,7 @@ from pathlib import Path
 
 import numpy as np
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 MODEL_PATH = Path("models/model.pkl")
@@ -127,3 +128,9 @@ def featured_round() -> dict:
 async def predict(state: GameState) -> Prediction:
     """Return the calibrated probability that the T side wins this round."""
     return Prediction(t_win_prob=round(_proba(state), 4))
+
+
+# Serve the dashboard. Mounted last so the API routes above take precedence.
+_FRONTEND = Path("frontend")
+if _FRONTEND.is_dir():
+    app.mount("/", StaticFiles(directory=str(_FRONTEND), html=True), name="dashboard")
