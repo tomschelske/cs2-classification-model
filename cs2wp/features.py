@@ -70,6 +70,20 @@ SECONDARY_FEATURES = [
 # tried but demoparser2 returns map-specific entity IDs, not A/B — dropped.)
 CATEGORICAL = ["map"]
 
+# KNOWN LIMITATION — asymmetric-coefficient artifact at symmetric states.
+# The per-side features here are ABSOLUTE (equip_value_t AND equip_value_ct, etc.),
+# and nothing forces the model to weight the two sides as mirror images. The
+# linear model learns e.g. +1.15 for equip_value_t but only -0.70 for
+# equip_value_ct, so a *balanced* state that is far from the data mean (a fresh
+# 5v5 full buy) tilts spuriously toward T — e.g. even-buy dust2 reads ~0.59 T
+# despite dust2 being CT-sided (empirical T-win 0.43). It flips correctly to CT
+# once both economies are lowered. The model is reliable once a round diverges
+# (unequal alive/HP/economy, which dominates training); the symmetric opening is
+# its weakest corner. Cleanest fix: reframe the symmetric per-side features as
+# T-minus-CT DIFFERENTIALS (a balanced state -> 0 -> structurally neutral), while
+# keeping the genuinely asymmetric features (bomb/kits/time/map) absolute. See
+# docs / interview notes.
+
 LABEL = "t_win"           # 1 if the T side won the round, else 0
 GROUP_KEY = "match_id"    # split on this — never let a match cross the split
 
