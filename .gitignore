@@ -15,8 +15,10 @@ data/**/*.parquet
 data/parse_report.json
 models/*.pkl
 models/*.joblib
-# ...but keep metrics.json so the headline numbers are versioned
+# ...but keep metrics.json (headline numbers) and the tiny deployed model.pkl
+# (2.6KB linear kernel) so the Docker build / CI can copy it into the image.
 !models/metrics.json
+!models/model.pkl
 
 # Frontend
 frontend/node_modules/

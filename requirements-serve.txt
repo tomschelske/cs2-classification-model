@@ -1,0 +1,9 @@
+# Slim serving deps — what the deployed container needs, and nothing else.
+# NOT here (and deliberately so): demoparser2, awpy, libomp, lightgbm, pandas,
+# matplotlib, jupyter. Parsing/training are offline; the deployed model is a
+# linear pipeline served as a NumPy dot product. scikit-learn is present only to
+# unpickle models/model.pkl (pinned to the training version for pickle safety).
+fastapi==0.139.2
+uvicorn[standard]==0.51.0
+numpy==2.5.1
+scikit-learn==1.9.0
