@@ -70,19 +70,18 @@ SECONDARY_FEATURES = [
 # tried but demoparser2 returns map-specific entity IDs, not A/B — dropped.)
 CATEGORICAL = ["map"]
 
-# KNOWN LIMITATION — asymmetric-coefficient artifact at symmetric states.
+# NOTE — minor unenforced side-asymmetry (not a real-state failure).
 # The per-side features here are ABSOLUTE (equip_value_t AND equip_value_ct, etc.),
-# and nothing forces the model to weight the two sides as mirror images. The
-# linear model learns e.g. +1.15 for equip_value_t but only -0.70 for
-# equip_value_ct, so a *balanced* state that is far from the data mean (a fresh
-# 5v5 full buy) tilts spuriously toward T — e.g. even-buy dust2 reads ~0.59 T
-# despite dust2 being CT-sided (empirical T-win 0.43). It flips correctly to CT
-# once both economies are lowered. The model is reliable once a round diverges
-# (unequal alive/HP/economy, which dominates training); the symmetric opening is
-# its weakest corner. Cleanest fix: reframe the symmetric per-side features as
-# T-minus-CT DIFFERENTIALS (a balanced state -> 0 -> structurally neutral), while
-# keeping the genuinely asymmetric features (bomb/kits/time/map) absolute. See
-# docs / interview notes.
+# and nothing forces the model to weight the two sides as mirror images: it learns
+# e.g. +1.15 for equip_value_t but only -0.70 for equip_value_ct. So a *balanced*
+# state isn't guaranteed neutral, and the model extrapolates a slight lean on
+# balanced-but-off-distribution synthetic inputs (e.g. a full economy with kits=0
+# and no utility). On REAL states this is negligible — the model is well-calibrated
+# at round openings by buy level (checked: dust2 openings 0.42 pred vs 0.43 actual;
+# equal full-buy openings 0.51 vs 0.54). (Caution: dust2 is CT-sided *overall*
+# (0.43) but T-favored on equal *full-buy* rounds (~0.60) — don't compare a
+# conditional prediction to the marginal base rate.) Optional tidy-up: reframe the
+# symmetric per-side features as T-minus-CT DIFFERENTIALS so a balanced state -> 0.
 
 LABEL = "t_win"           # 1 if the T side won the round, else 0
 GROUP_KEY = "match_id"    # split on this — never let a match cross the split
