@@ -15,8 +15,10 @@ data/*.parquet
 data/parse_report.json
 frontend/replay.template.html
 frontend/build_replay.py
+tests/
 *.md
 requirements.txt
-requirements-serve.txt
+requirements-test.txt
 Dockerfile
 .dockerignore
+# NB: requirements-serve.txt is NOT ignored — the Dockerfile COPYs it.

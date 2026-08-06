@@ -1,0 +1,4 @@
+# Test-only deps, on top of requirements-serve.txt. CI installs both, then runs
+# pytest — so the test environment matches what's actually deployed.
+pytest
+httpx
