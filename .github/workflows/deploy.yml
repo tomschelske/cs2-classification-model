@@ -23,23 +23,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Deploy only once FLY_API_TOKEN is configured; until then the pipeline
-      # still passes (tests run, deploy is skipped) instead of failing red.
-      - name: Check for Fly token
-        id: fly
+      # Deploy only once HF_TOKEN is configured; until then the pipeline still
+      # passes (tests run, deploy is skipped) instead of failing red.
+      - name: Check for HF token
+        id: hf
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          if [ -z "$FLY_API_TOKEN" ]; then
-            echo "No FLY_API_TOKEN secret set — skipping deploy. Add it to enable."
+          if [ -z "$HF_TOKEN" ]; then
+            echo "No HF_TOKEN secret set — skipping deploy. Add it to enable."
             echo "deploy=false" >> "$GITHUB_OUTPUT"
           else
             echo "deploy=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-        if: steps.fly.outputs.deploy == 'true'
-      - name: Deploy to Fly.io (builds the image remotely)
-        if: steps.fly.outputs.deploy == 'true'
-        run: flyctl deploy --remote-only
+      - name: Push to Hugging Face Space (HF builds the Dockerfile)
+        if: steps.hf.outputs.deploy == 'true'
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_USER: ${{ vars.HF_USERNAME }}
+          HF_SPACE: cs2-winprob
+        run: |
+          # Space config (Docker SDK, port 8000). Written only in this ephemeral
+          # checkout so HF treats the repo as a Docker Space — the GitHub README
+          # on main is never touched.
+          cat > README.md <<'EOF'
+          ---
+          title: CS2 Win Probability
+          emoji: 🎯
+          colorFrom: yellow
+          colorTo: blue
+          sdk: docker
+          app_port: 8000
+          pinned: false
+          ---
+
+          Live CS2 round win-probability dashboard — an interactive predictor plus a
+          per-kill "leverage" round replay. Full project:
+          https://github.com/tomschelske/cs2-classification-model
+          EOF
+          # Push the current tree as a single fresh commit (avoids shallow-clone issues).
+          rm -rf .git
+          git init -q
+          git config user.email "ci@github"
+          git config user.name "github-actions"
+          git add -A
+          git commit -q -m "Deploy ${GITHUB_SHA}"
+          git push --force "https://${HF_USER}:${HF_TOKEN}@huggingface.co/spaces/${HF_USER}/${HF_SPACE}" HEAD:main
